@@ -1,69 +1,101 @@
-import Image from "next/image";
+import MultiStepForm from "@/components/MultiStepForm";
+
+const SPEAKERS = [
+  "Dr. Marco Rodríguez",
+  "Dr. José Ramón Russian",
+  "Dra. Dubraska Valverde",
+  "Dr. Ricardo Brito",
+  "Dr. Luis Alberto García",
+  "Dra. Clelia Ferreira",
+  "Dr. Rodrigo Pino",
+  "Dr. Braulio López",
+  "Dra. Adriana Borjas",
+  "Dra. María Laura Ramírez",
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex min-h-dvh flex-col">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-5 py-10 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:py-16">
+        {/* Información */}
+        <section>
+          <p className="eyebrow reveal" style={{ ["--i" as string]: 0 } as React.CSSProperties}>
+            Universidad de Carabobo · Facultad de Odontología
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+          <h1
+            className="display reveal mt-4"
+            style={{ ["--i" as string]: 1 } as React.CSSProperties}
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            III Jornada de Actualización en Implantología Bucal
+          </h1>
+
+          <p
+            className="lead reveal mt-4 max-w-xl"
+            style={{ ["--i" as string]: 2 } as React.CSSProperties}
           >
-            Documentation
-          </a>
-        </div>
+            Una jornada para actualizarte con especialistas. Asegura tu lugar en menos de un minuto.
+          </p>
+
+          <div
+            className="reveal mt-6 flex flex-wrap gap-2.5"
+            style={{ ["--i" as string]: 3 } as React.CSSProperties}
+          >
+            <span className="chip">📅 21 de noviembre, 2026</span>
+            <span className="chip">📍 Instituto Docente de Urología</span>
+          </div>
+
+          <div
+            className="reveal mt-9"
+            style={{ ["--i" as string]: 4 } as React.CSSProperties}
+          >
+            <p className="eyebrow mb-3">Ponentes</p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {SPEAKERS.map((name) => (
+                <div key={name} className="speaker">
+                  {name}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p
+            className="reveal mt-6 text-sm text-[#5b6e80]"
+            style={{ ["--i" as string]: 5 } as React.CSSProperties}
+          >
+            Más información: 0424-4000350 ·{" "}
+            <a
+              href="https://instagram.com/implantologiafouc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#0088cc] underline-offset-4 hover:underline"
+            >
+              @implantologiafouc
+            </a>
+          </p>
+        </section>
+
+        {/* Formulario */}
+        <section
+          className="reveal"
+          style={{ ["--i" as string]: 3 } as React.CSSProperties}
+          aria-label="Formulario de inscripción"
+        >
+          <MultiStepForm />
+        </section>
       </main>
+
+      <footer className="px-5 pb-8 pt-2 text-center text-sm text-[#5b6e80]">
+        Creado por{" "}
+        <a
+          href="https://instagram.com/synco.ia"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-[#2c4255] underline-offset-4 transition-colors hover:text-[#0088cc] hover:underline"
+        >
+          Synco
+        </a>
+      </footer>
     </div>
   );
 }
