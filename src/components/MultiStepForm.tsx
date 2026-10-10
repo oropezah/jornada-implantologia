@@ -1,21 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import ProgressBar from "./ProgressBar";
 import { playSuccessChime, unlockAudio } from "@/lib/sound";
 
-/* ───────────────────────────────────────────────────────────────
+/* 
    MODO PRUEBA
-   true  → agenda "ficticiamente": no llama al backend ni guarda nada.
-   false → envía de verdad a NEXT_PUBLIC_API_URL/register
-   ─────────────────────────────────────────────────────────────── */
+   true   agenda "ficticiamente": no llama al backend ni guarda nada.
+   false  envía de verdad a NEXT_PUBLIC_API_URL/register
+*/
 const PRUEBA = false;
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const EASE = [0.23, 1, 0.32, 1] as const;
 
-// Datos de pago móvil (genéricos por ahora)
 const PAGO = [
   { label: "Cédula", value: "26.581.836", copy: "26581836" },
   { label: "Teléfono", value: "04144099988", copy: "04144099988" },
@@ -115,7 +114,6 @@ const EMPTY: Record<FieldKey, string> = { nombre: "", cedula: "", correo: "", te
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Reduce la foto del comprobante (las del teléfono pesan varios MB). */
 async function compressImage(file: File, maxSide = 1600, quality = 0.85): Promise<File> {
   try {
     const bmp = await createImageBitmap(file);
@@ -165,6 +163,8 @@ function CopyButton({ text }: { text: string }) {
 
 export default function MultiStepForm() {
   const reduce = useReducedMotion();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [values, setValues] = useState(EMPTY);
@@ -239,7 +239,7 @@ export default function MultiStepForm() {
       return;
     }
 
-    unlockAudio(); // dentro del click, para que el sonido no sea bloqueado
+    unlockAudio();
     setSending(true);
     try {
       if (PRUEBA) {
@@ -271,7 +271,6 @@ export default function MultiStepForm() {
 
   return (
     <>
-      {/* Notificación */}
       <AnimatePresence>
         {toast && (
           <div className="pointer-events-none fixed inset-x-0 top-4 z-[90] flex justify-center">
@@ -368,7 +367,7 @@ export default function MultiStepForm() {
         >
           {PRUEBA && (
             <p className="mb-5 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-              🧪 Modo prueba · no se guarda ni se envía nada
+               Modo prueba · no se guarda ni se envía nada
             </p>
           )}
 
@@ -423,8 +422,16 @@ export default function MultiStepForm() {
                       </div>
                     </div>
 
-                    <label
-                      htmlFor="comprobante"
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => fileInputRef.current?.click()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
                       className="mt-4 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-[#0088cc]/50 bg-white/70 p-4 transition-colors hover:bg-white focus-within:ring-2 focus-within:ring-[#0088cc]"
                     >
                       {preview ? (
@@ -445,14 +452,17 @@ export default function MultiStepForm() {
                           {file ? "Toca para cambiar la imagen" : "Foto o captura de pantalla"}
                         </span>
                       </span>
-                    </label>
+                    </div>
+
                     <input
+                      ref={fileInputRef}
                       id="comprobante"
                       type="file"
                       accept="image/*"
-                      className="sr-only"
+                      className="hidden"
                       onChange={(e) => onPickFile(e.target.files?.[0])}
                     />
+
                     <p className="field-message" role="alert">
                       {fileError}
                     </p>
