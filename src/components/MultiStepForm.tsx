@@ -140,18 +140,9 @@ async function compressImage(file: File, maxSide = 1600, quality = 0.85): Promis
 }
 
 async function sendRegistration(body: FormData) {
-  // Añadimos un timestamp aleatorio al final de la URL para que NINGUNA capa de caché (Cloudflare/Vercel) pueda guardar la petición
-  const cacheBuster = `?t=${Date.now()}`;
-  const endpoint = `${API_URL}/api/v1/register${cacheBuster}`;
-
-  const res = await fetch(endpoint, {
+  const res = await fetch(`${API_URL}/api/v1/register`, {
     method: "POST",
     body,
-    cache: "no-store",
-    headers: {
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache",
-    },
   });
 
   if (!res.ok) {
