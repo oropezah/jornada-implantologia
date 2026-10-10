@@ -5,10 +5,18 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import ProgressBar from "./ProgressBar";
 import { playSuccessChime, unlockAudio } from "@/lib/sound";
 
+/* ───────────────────────────────────────────────────────────────
+   MODO PRUEBA
+   true  → agenda "ficticiamente": no llama al backend, no guarda en Sheets
+           ni envía correo/WhatsApp. Útil mientras no conectas el backend.
+   false → envía de verdad a NEXT_PUBLIC_API_URL/register
+   ─────────────────────────────────────────────────────────────── */
+const PRUEBA = true;
+
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const EASE = [0.23, 1, 0.32, 1] as const;
 
-type FieldKey = "nombre" | "apellido" | "cedula" | "correo" | "telefono" | "institucion";
+type FieldKey = "nombre" | "cedula" | "correo" | "telefono" | "institucion";
 
 type FieldDef = {
   key: FieldKey;
@@ -27,10 +35,16 @@ const minLen = (n: number, msg: string) => (v: string) => (v.trim().length < n ?
 const STEPS: Step[] = [
   {
     title: "¿Cómo te llamas?",
-    hint: "Tal como aparecerá en tu certificado.",
+    hint: "Nombre y apellido, tal como aparecerá en tu certificado.",
     fields: [
-      { key: "nombre", label: "Nombre", placeholder: "Nombre", autoComplete: "given-name", validate: minLen(2, "Escribe tu nombre.") },
-      { key: "apellido", label: "Apellido", placeholder: "Apellido", autoComplete: "family-name", validate: minLen(2, "Escribe tu apellido.") },
+      {
+        key: "nombre",
+        label: "Nombre y apellido",
+        placeholder: "Nombre y apellido",
+        autoComplete: "name",
+        validate: (v) =>
+          v.trim().split(/\s+/).filter(Boolean).length < 2 ? "Escribe tu nombre y apellido." : null,
+      },
     ],
   },
   {
@@ -85,7 +99,25 @@ const STEPS: Step[] = [
   },
 ];
 
-const EMPTY: Record<FieldKey, string> = { nombre: "", apellido: "", cedula: "", correo: "", telefono: "", institucion: "" };
+const EMPTY: Record<FieldKey, string> = { nombre: "", cedula: "", correo: "", telefono: "", institucion: "" };
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function sendRegistration(payload: Record<string, string>) {
+  const res = await fetch(`${API_URL}/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let msg = "No se pudo completar la inscripción. Intenta de nuevo.";
+    try {
+      const j = await res.json();
+      if (typeof j.detail === "string") msg = j.detail;
+    } catch {}
+    throw new Error(msg);
+  }
+}
 
 export default function MultiStepForm() {
   const reduce = useReducedMotion();
@@ -100,7 +132,7 @@ export default function MultiStepForm() {
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
-  const multi = current.fields.length > 1;
+  const firstName = values.nombre.trim().split(/\s+/)[0] ?? "";
 
   useEffect(() => {
     if (!toast) return;
@@ -134,18 +166,10 @@ export default function MultiStepForm() {
     setSending(true);
     try {
       const payload = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.trim()]));
-      const res = await fetch(`${API_URL}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        let msg = "No se pudo completar la inscripción. Intenta de nuevo.";
-        try {
-          const j = await res.json();
-          if (typeof j.detail === "string") msg = j.detail;
-        } catch {}
-        throw new Error(msg);
+      if (PRUEBA) {
+        await sleep(900); // simula el envío
+      } else {
+        await sendRegistration(payload);
       }
       playSuccessChime();
       setDone(true);
@@ -213,12 +237,12 @@ export default function MultiStepForm() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE, delay: 0.2 }}>
-            <h3 className="text-center text-2xl font-bold tracking-tight text-[#2c4255]">¡Listo, {values.nombre.trim()}!</h3>
+            <h3 className="text-center text-2xl font-bold tracking-tight text-[#2c4255]">¡Listo, {firstName}!</h3>
             <p className="mt-1.5 text-center text-[#5b6e80]">Tu lugar quedó agendado para el 21 de noviembre.</p>
 
             <dl className="mt-6 divide-y divide-[#b8d1e1]/60 rounded-2xl border border-[#b8d1e1]/70 bg-white/70 text-sm">
               {[
-                ["Nombre", `${values.nombre.trim()} ${values.apellido.trim()}`],
+                ["Nombre", values.nombre.trim()],
                 ["Cédula", values.cedula.trim()],
                 ["Correo", values.correo.trim()],
                 ["Teléfono", values.telefono.trim()],
@@ -237,6 +261,12 @@ export default function MultiStepForm() {
               <li>3. Instituto Docente de Urología · 21 de noviembre, 2026.</li>
             </ol>
 
+            {PRUEBA && (
+              <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-800">
+                Modo prueba: no se guardó nada ni se envió correo ni WhatsApp.
+              </p>
+            )}
+
             <p className="mt-6 border-t border-[#b8d1e1]/60 pt-4 text-center text-xs text-[#5b6e80]">
               Este reporte fue hecho por{" "}
               <a href="https://instagram.com/synco.ia" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0088cc] underline-offset-4 hover:underline">
@@ -254,6 +284,12 @@ export default function MultiStepForm() {
           }}
           noValidate
         >
+          {PRUEBA && (
+            <p className="mb-5 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+              🧪 Modo prueba · no se guarda ni se envía nada
+            </p>
+          )}
+
           <ProgressBar current={step} total={STEPS.length} />
 
           <div className="min-h-[220px]">
@@ -262,38 +298,31 @@ export default function MultiStepForm() {
                 <h3 className="text-[1.4rem] font-bold tracking-tight text-[#2c4255]">{current.title}</h3>
                 <p className="mb-5 mt-1 text-sm text-[#5b6e80]">{current.hint}</p>
 
-                <div className={multi ? "grid gap-x-4 sm:grid-cols-2" : ""}>
-                  {current.fields.map((f, i) => (
-                    <div key={f.key}>
-                      {multi && (
-                        <label htmlFor={f.key} className="mb-1.5 block text-xs font-semibold text-[#5b6e80]">
-                          {f.label}
-                        </label>
-                      )}
-                      <input
-                        id={f.key}
-                        name={f.key}
-                        aria-label={f.label}
-                        autoFocus={i === 0}
-                        className="liquid-glass-input"
-                        type={f.type ?? "text"}
-                        inputMode={f.inputMode}
-                        autoComplete={f.autoComplete}
-                        autoCapitalize={f.key === "correo" ? "none" : undefined}
-                        placeholder={f.placeholder}
-                        value={values[f.key]}
-                        aria-invalid={errors[f.key] ? true : undefined}
-                        onChange={(e) => {
-                          setValues((v) => ({ ...v, [f.key]: e.target.value }));
-                          if (errors[f.key]) setErrors((er) => ({ ...er, [f.key]: undefined }));
-                        }}
-                      />
-                      <p className="field-message" role="alert">
-                        {errors[f.key]}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                {current.fields.map((f) => (
+                  <div key={f.key}>
+                    <input
+                      id={f.key}
+                      name={f.key}
+                      aria-label={f.label}
+                      autoFocus
+                      className="liquid-glass-input"
+                      type={f.type ?? "text"}
+                      inputMode={f.inputMode}
+                      autoComplete={f.autoComplete}
+                      autoCapitalize={f.key === "correo" ? "none" : f.key === "nombre" ? "words" : undefined}
+                      placeholder={f.placeholder}
+                      value={values[f.key]}
+                      aria-invalid={errors[f.key] ? true : undefined}
+                      onChange={(e) => {
+                        setValues((v) => ({ ...v, [f.key]: e.target.value }));
+                        if (errors[f.key]) setErrors((er) => ({ ...er, [f.key]: undefined }));
+                      }}
+                    />
+                    <p className="field-message" role="alert">
+                      {errors[f.key]}
+                    </p>
+                  </div>
+                ))}
 
                 {formError && (
                   <p className="field-message" role="alert">

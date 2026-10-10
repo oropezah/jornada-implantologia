@@ -68,23 +68,60 @@ input { font-size: 16px; font-family: inherit; }
   border-radius: 999px;
 }
 
-/* Ponentes */
-.speaker {
-  display: flex; align-items: center; gap: 12px; width: 100%;
-  padding: 10px 14px 10px 10px; text-align: left;
-  font-size: 0.92rem; font-weight: 600; color: var(--brand-dark);
-  cursor: pointer;
+/* Ponentes (se despliegan en su lugar, sin bloquear el scroll) */
+.speaker-item {
+  overflow: hidden;
   background: rgba(255, 255, 255, 0.6);
   border: 1px solid rgba(184, 209, 225, 0.7);
   border-radius: 16px;
-  transition: transform 200ms var(--ease-out), background-color 200ms ease, border-color 200ms ease, box-shadow 240ms var(--ease-out);
+  transition: background-color 200ms ease, border-color 200ms ease,
+    box-shadow 240ms var(--ease-out);
 }
-.speaker .chev { margin-left: auto; color: var(--brand-ice); transition: transform 220ms var(--ease-out), color 200ms ease; }
+
+.speaker-item[data-open="true"] {
+  background: #fff;
+  border-color: var(--brand-blue);
+  box-shadow: 0 14px 28px -16px rgba(0, 136, 204, 0.4);
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .speaker:hover { transform: translateY(-2px); background: #fff; border-color: var(--brand-blue); box-shadow: 0 12px 24px -14px rgba(0, 136, 204, 0.4); }
-  .speaker:hover .chev { transform: translateX(3px); color: var(--brand-blue); }
+  .speaker-item:hover {
+    background: #fff;
+    border-color: var(--brand-blue);
+  }
 }
-.speaker:active { transform: scale(0.98); transition-duration: 90ms; }
+
+.speaker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px 10px 10px;
+  text-align: left;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--brand-dark);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  transition: transform 160ms var(--ease-out);
+}
+
+.speaker:active {
+  transform: scale(0.98);
+  transition-duration: 90ms;
+}
+
+.speaker .chev {
+  margin-left: auto;
+  color: var(--brand-ice);
+  transition: transform 260ms var(--ease-out), color 200ms ease;
+}
+
+.speaker-item[data-open="true"] .chev {
+  transform: rotate(90deg);
+  color: var(--brand-blue);
+}
 
 .avatar {
   display: grid; flex-shrink: 0; place-items: center;
