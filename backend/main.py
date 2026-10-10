@@ -87,6 +87,8 @@ def health():
     return {"ok": True}
 
 
+from fastapi.responses import JSONResponse
+
 @app.post("/register")
 def register(
     bg: BackgroundTasks,
@@ -97,6 +99,58 @@ def register(
     institucion: str = Form(...),
     comprobante: UploadFile = File(...),
 ):
+    try:
+        a = Attendee(
+            nombre=nombre,
+            cedula=cedula,
+            correo=correo,
+            telefono=telefono,
+            institucion=institucion,
+        )
+    except ValidationError as e:
+        log.warning(f"Validation error: {e}")
+        return JSONResponse(status_code=422, content={"detail": "Revisa los datos del formulario."})
+
+    mime = comprobante.content_type or ""
+    content = comprobante.file.read(MAX_FILE_BYTES + 1)
+    if not content:
+        return JSONResponse(status_code=422, content={"detail": "El comprobante está vacío."})
+    if len(content) > MAX_FILE_BYTES:
+        return JSONResponse(status_code=413, content={"detail": "La imagen es muy pesada (máx. 8 MB)."})
+
+    data = a.model_dump()
+    data["correo"] = str(a.correo)
+    data["telefono_wa"] = normalize_phone(a.telefono)
+
+    # 1. Verificar duplicado en Sheets
+    try:
+        if cedula_exists(str(data["cedula"]).strip()):
+            return JSONResponse(status_code=409, content={"detail": "Esta cédula ya está inscrita."})
+    except Exception as e:
+        log.exception(f"Error verificando cedula en Sheets: {e}")
+
+    # 2. Subir a Google Drive
+    try:
+        data["comprobante_url"] = upload_receipt(content, mime, str(data["cedula"]), data["nombre"])
+    except Exception as e:
+        log.exception(f"Error subiendo comprobante a Google Drive: {e}")
+        return JSONResponse(status_code=500, content={"detail": "Error al guardar el comprobante en Google Drive."})
+
+    # 3. Guardar en Google Sheets
+    try:
+        append_attendee(data)
+    except Exception as e:
+        log.exception(f"Error guardando en Google Sheets: {e}")
+        return JSONResponse(status_code=500, content={"detail": "No pudimos registrar los datos en Google Sheets."})
+
+    # Background Tasks
+    try:
+        bg.add_task(send_confirmation_email, data)
+        bg.add_task(notify_whatsapp, data)
+    except Exception as e:
+        log.error(f"Error programando tareas secundarias: {e}")
+
+    return JSONResponse(status_code=200, content={"ok": True}):
     try:
         a = Attendee(
             nombre=nombre,
