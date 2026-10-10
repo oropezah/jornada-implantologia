@@ -5,15 +5,10 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import ProgressBar from "./ProgressBar";
 import { playSuccessChime, unlockAudio } from "@/lib/sound";
 
-/* 
-   MODO PRUEBA
-   true   agenda "ficticiamente": no llama al backend ni guarda nada.
-   false  envía de verdad a NEXT_PUBLIC_API_URL/register
-*/
 const PRUEBA = false;
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
-const EASE = [0.23, 1, 0.32, 1] as const;
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "https://jornada-backend-j5u6.onrender.com").replace(/\/$/, "");
+const EASE: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 const PAGO = [
   { label: "Cédula", value: "26.581.836", copy: "26581836" },
@@ -115,25 +110,37 @@ const EMPTY: Record<FieldKey, string> = { nombre: "", cedula: "", correo: "", te
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function compressImage(file: File, maxSide = 1600, quality = 0.85): Promise<File> {
-  try {
-    const bmp = await createImageBitmap(file);
-    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bmp.width * scale);
-    canvas.height = Math.round(bmp.height * scale);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return file;
-    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
-    if (!blob || blob.size >= file.size) return file;
-    return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
-  } catch {
-    return file;
-  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(file);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) return resolve(file);
+          resolve(new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    img.src = url;
+  });
 }
 
 async function sendRegistration(body: FormData) {
-  const res = await fetch(`${API_URL}/register`, { method: "POST", body });
+  const res = await fetch(`${API_URL}/api/v1/register`, { method: "POST", body });
   if (!res.ok) {
     let msg = "No se pudo completar la inscripción. Intenta de nuevo.";
     try {
@@ -212,10 +219,6 @@ export default function MultiStepForm() {
     setFileError(null);
     setFormError(null);
     if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      setFileError("El comprobante debe ser una imagen (foto o captura).");
-      return;
-    }
     if (f.size > 15 * 1024 * 1024) {
       setFileError("La imagen es muy pesada (máx. 15 MB).");
       return;
@@ -259,8 +262,8 @@ export default function MultiStepForm() {
       playSuccessChime();
       setDone(true);
       setToast(true);
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : "Ocurrió un error. Intenta de nuevo.");
+    } catch (e: any) {
+      setFormError(e?.message || "Ocurrió un error. Intenta de nuevo.");
     } finally {
       setSending(false);
     }
@@ -463,7 +466,7 @@ export default function MultiStepForm() {
                       ref={fileInputRef}
                       id="comprobante"
                       type="file"
-                      accept="image/*"
+                      accept="image/*,image/heic,image/heif"
                       className="hidden"
                       onChange={(e) => onPickFile(e.target.files?.[0])}
                     />

@@ -8,6 +8,7 @@ load_dotenv()
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.responses import JSONResponse  # noqa: E402
 from pydantic import BaseModel, EmailStr, ValidationError, field_validator  # noqa: E402
 
 from drive import upload_receipt  # noqa: E402
@@ -22,18 +23,16 @@ MAX_FILE_BYTES = 8 * 1024 * 1024
 
 app = FastAPI(title="Jornada Implantología API")
 
-# Reemplaza la configuración de CORS existente por esta:
 allowed_origins_env = os.getenv(
     "ALLOWED_ORIGINS", 
-    "http://localhost:3000,https://jornada-implantologia.vercel.app/"
+    "http://localhost:3000,https://jornada-implantologia.vercel.app,https://plantologia.vercel.app"
 )
 
 origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",  # Permite cualquier preview o despliegue en Vercel
+    allow_origins=["*"],  # Opciones permisivas para evitar bloqueos por CORS en mobile
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -87,9 +86,7 @@ def health():
     return {"ok": True}
 
 
-from fastapi.responses import JSONResponse
-
-@app.post("/register")
+@app.post("/api/v1/register")
 def register(
     bg: BackgroundTasks,
     nombre: str = Form(...),
@@ -139,57 +136,17 @@ def register(
     # 3. Guardar en Google Sheets
     try:
         append_attendee(data)
+    except DuplicateAttendee:
+        return JSONResponse(status_code=409, content={"detail": "Esta cédula ya está inscrita."})
     except Exception as e:
         log.exception(f"Error guardando en Google Sheets: {e}")
         return JSONResponse(status_code=500, content={"detail": "No pudimos registrar los datos en Google Sheets."})
 
-    # Background Tasks
+    # Tareas en segundo plano (Envío de correo y WhatsApp)
     try:
         bg.add_task(send_confirmation_email, data)
         bg.add_task(notify_whatsapp, data)
     except Exception as e:
         log.error(f"Error programando tareas secundarias: {e}")
 
-    return JSONResponse(status_code=200, content={"ok": True}):
-    try:
-        a = Attendee(
-            nombre=nombre,
-            cedula=cedula,
-            correo=correo,
-            telefono=telefono,
-            institucion=institucion,
-        )
-    except ValidationError:
-        raise HTTPException(status_code=422, detail="Revisa los datos del formulario.")
-
-    mime = comprobante.content_type or ""
-    if not mime.startswith("image/"):
-        raise HTTPException(status_code=422, detail="El comprobante debe ser una imagen.")
-
-    content = comprobante.file.read(MAX_FILE_BYTES + 1)
-    if not content:
-        raise HTTPException(status_code=422, detail="El comprobante está vacío.")
-    if len(content) > MAX_FILE_BYTES:
-        raise HTTPException(status_code=413, detail="La imagen es muy pesada (máx. 8 MB).")
-
-    data = a.model_dump()
-    data["correo"] = str(a.correo)
-    data["telefono_wa"] = normalize_phone(a.telefono)
-
-    try:
-        if cedula_exists(data["cedula"]):
-            raise DuplicateAttendee()
-        data["comprobante_url"] = upload_receipt(content, mime, data["cedula"], data["nombre"])
-        append_attendee(data)
-    except DuplicateAttendee:
-        raise HTTPException(status_code=409, detail="Esta cédula ya está inscrita.")
-    except Exception:
-        log.exception("Error guardando la inscripción")
-        raise HTTPException(
-            status_code=500,
-            detail="No pudimos guardar tu inscripción. Intenta de nuevo.",
-        )
-
-    bg.add_task(send_confirmation_email, data)
-    bg.add_task(notify_whatsapp, data)
-    return {"ok": True}
+    return JSONResponse(status_code=200, content={"ok": True})
