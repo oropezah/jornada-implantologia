@@ -7,7 +7,7 @@ import { playSuccessChime, unlockAudio } from "@/lib/sound";
 
 const PRUEBA = false;
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "https://jornada-backend-j5u6.onrender.com").replace(/\/$/, "");
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "https://jornada-implantologia.onrender.com").replace(/\/$/, "");
 const EASE: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 const PAGO = [
