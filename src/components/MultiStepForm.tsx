@@ -7,14 +7,20 @@ import { playSuccessChime, unlockAudio } from "@/lib/sound";
 
 /* ───────────────────────────────────────────────────────────────
    MODO PRUEBA
-   true  → agenda "ficticiamente": no llama al backend, no guarda en Sheets
-           ni envía correo/WhatsApp. Útil mientras no conectas el backend.
+   true  → agenda "ficticiamente": no llama al backend ni guarda nada.
    false → envía de verdad a NEXT_PUBLIC_API_URL/register
    ─────────────────────────────────────────────────────────────── */
-const PRUEBA = true;
+const PRUEBA = false;
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const EASE = [0.23, 1, 0.32, 1] as const;
+
+// Datos de pago móvil (genéricos por ahora)
+const PAGO = [
+  { label: "Cédula", value: "26.581.836", copy: "26581836" },
+  { label: "Teléfono", value: "04144099988", copy: "04144099988" },
+  { label: "Banco", value: "Banco de Venezuela", copy: "Banco de Venezuela" },
+];
 
 type FieldKey = "nombre" | "cedula" | "correo" | "telefono" | "institucion";
 
@@ -28,7 +34,7 @@ type FieldDef = {
   validate: (v: string) => string | null;
 };
 
-type Step = { title: string; hint: string; fields: FieldDef[] };
+type Step = { title: string; hint: string; fields: FieldDef[]; kind?: "pago" };
 
 const minLen = (n: number, msg: string) => (v: string) => (v.trim().length < n ? msg : null);
 
@@ -76,8 +82,8 @@ const STEPS: Step[] = [
     ],
   },
   {
-    title: "Tu número de WhatsApp",
-    hint: "Te escribiremos para coordinar el pago.",
+    title: "Tu número de teléfono",
+    hint: "Para contactarte si hay algún cambio.",
     fields: [
       {
         key: "telefono",
@@ -97,18 +103,39 @@ const STEPS: Step[] = [
       { key: "institucion", label: "Institución", placeholder: "Institución", autoComplete: "organization", validate: minLen(2, "Cuéntanos de dónde vienes.") },
     ],
   },
+  {
+    title: "Realiza tu pago",
+    hint: "Haz el pago móvil y sube el comprobante para confirmar tu lugar.",
+    fields: [],
+    kind: "pago",
+  },
 ];
 
 const EMPTY: Record<FieldKey, string> = { nombre: "", cedula: "", correo: "", telefono: "", institucion: "" };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function sendRegistration(payload: Record<string, string>) {
-  const res = await fetch(`${API_URL}/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+/** Reduce la foto del comprobante (las del teléfono pesan varios MB). */
+async function compressImage(file: File, maxSide = 1600, quality = 0.85): Promise<File> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
+async function sendRegistration(body: FormData) {
+  const res = await fetch(`${API_URL}/register`, { method: "POST", body });
   if (!res.ok) {
     let msg = "No se pudo completar la inscripción. Intenta de nuevo.";
     try {
@@ -119,12 +146,32 @@ async function sendRegistration(payload: Record<string, string>) {
   }
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [ok, setOk] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard?.writeText(text);
+        setOk(true);
+        setTimeout(() => setOk(false), 1500);
+      }}
+      className="rounded-full bg-[#f0f4f8] px-3 py-1 text-xs font-semibold text-[#2c4255] transition-transform active:scale-95"
+    >
+      {ok ? "¡Copiado!" : "Copiar"}
+    </button>
+  );
+}
+
 export default function MultiStepForm() {
   const reduce = useReducedMotion();
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [values, setValues] = useState(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
@@ -140,11 +187,36 @@ export default function MultiStepForm() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  useEffect(() => {
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
   const variants = {
     initial: (d: number) => ({ opacity: 0, x: reduce ? 0 : d * 24, filter: reduce ? "blur(0px)" : "blur(4px)" }),
     animate: { opacity: 1, x: 0, filter: "blur(0px)", transition: { duration: 0.34, ease: EASE } },
     exit: (d: number) => ({ opacity: 0, x: reduce ? 0 : d * -16, filter: reduce ? "blur(0px)" : "blur(4px)", transition: { duration: 0.16, ease: EASE } }),
   };
+
+  function onPickFile(f: File | undefined) {
+    setFileError(null);
+    setFormError(null);
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      setFileError("El comprobante debe ser una imagen (foto o captura).");
+      return;
+    }
+    if (f.size > 15 * 1024 * 1024) {
+      setFileError("La imagen es muy pesada (máx. 15 MB).");
+      return;
+    }
+    setFile(f);
+  }
 
   async function next() {
     const found: Partial<Record<FieldKey, string>> = {};
@@ -156,6 +228,11 @@ export default function MultiStepForm() {
     setFormError(null);
     if (Object.keys(found).length) return;
 
+    if (current.kind === "pago" && !file) {
+      setFileError("Sube el comprobante de pago para continuar.");
+      return;
+    }
+
     if (!isLast) {
       setDirection(1);
       setStep((s) => s + 1);
@@ -165,11 +242,14 @@ export default function MultiStepForm() {
     unlockAudio(); // dentro del click, para que el sonido no sea bloqueado
     setSending(true);
     try {
-      const payload = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.trim()]));
       if (PRUEBA) {
-        await sleep(900); // simula el envío
+        await sleep(900);
       } else {
-        await sendRegistration(payload);
+        const body = new FormData();
+        Object.entries(values).forEach(([k, v]) => body.append(k, v.trim()));
+        const img = await compressImage(file as File);
+        body.append("comprobante", img, img.name);
+        await sendRegistration(body);
       }
       playSuccessChime();
       setDone(true);
@@ -183,6 +263,7 @@ export default function MultiStepForm() {
 
   function back() {
     setErrors({});
+    setFileError(null);
     setFormError(null);
     setDirection(-1);
     setStep((s) => Math.max(0, s - 1));
@@ -208,9 +289,9 @@ export default function MultiStepForm() {
                 </svg>
               </span>
               <div className="flex-1">
-                <p className="font-bold text-[#2c4255]">¡Inscripción agendada!</p>
+                <p className="font-bold text-[#2c4255]">¡Inscripción recibida!</p>
                 <p className="mt-0.5 text-sm text-[#5b6e80]">
-                  Recibirás la confirmación por correo y por WhatsApp para realizar el pago.
+                  Recibimos tu comprobante. Verificaremos tu pago y te confirmaremos tu lugar.
                 </p>
               </div>
               <button type="button" aria-label="Cerrar notificación" onClick={() => setToast(false)} className="text-[#5b6e80] transition-transform active:scale-90">
@@ -238,7 +319,7 @@ export default function MultiStepForm() {
 
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE, delay: 0.2 }}>
             <h3 className="text-center text-2xl font-bold tracking-tight text-[#2c4255]">¡Listo, {firstName}!</h3>
-            <p className="mt-1.5 text-center text-[#5b6e80]">Tu lugar quedó agendado para el 21 de noviembre.</p>
+            <p className="mt-1.5 text-center text-[#5b6e80]">Recibimos tu inscripción y tu comprobante de pago.</p>
 
             <dl className="mt-6 divide-y divide-[#b8d1e1]/60 rounded-2xl border border-[#b8d1e1]/70 bg-white/70 text-sm">
               {[
@@ -247,6 +328,7 @@ export default function MultiStepForm() {
                 ["Correo", values.correo.trim()],
                 ["Teléfono", values.telefono.trim()],
                 ["Institución", values.institucion.trim()],
+                ["Comprobante", file?.name ?? "—"],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4 px-4 py-2.5">
                   <dt className="text-[#5b6e80]">{k}</dt>
@@ -256,14 +338,14 @@ export default function MultiStepForm() {
             </dl>
 
             <ol className="mt-5 space-y-2 text-sm text-[#2c4255]">
-              <li>1. Te enviamos un correo de confirmación a {values.correo.trim()}.</li>
-              <li>2. Te escribiremos por WhatsApp con los datos para realizar el pago.</li>
+              <li>1. Verificaremos tu pago.</li>
+              <li>2. Te enviaremos la confirmación a {values.correo.trim()}.</li>
               <li>3. Instituto Docente de Urología · 21 de noviembre, 2026.</li>
             </ol>
 
             {PRUEBA && (
               <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-800">
-                Modo prueba: no se guardó nada ni se envió correo ni WhatsApp.
+                Modo prueba: no se guardó nada.
               </p>
             )}
 
@@ -324,6 +406,59 @@ export default function MultiStepForm() {
                   </div>
                 ))}
 
+                {current.kind === "pago" && (
+                  <div>
+                    <div className="rounded-2xl border border-[#b8d1e1]/70 bg-white/80 text-sm">
+                      <p className="eyebrow px-4 pt-3">Pago móvil</p>
+                      <div className="divide-y divide-[#b8d1e1]/50">
+                        {PAGO.map((p) => (
+                          <div key={p.label} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                            <div>
+                              <p className="text-xs text-[#5b6e80]">{p.label}</p>
+                              <p className="font-semibold tabular-nums text-[#2c4255]">{p.value}</p>
+                            </div>
+                            <CopyButton text={p.copy} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <label
+                      htmlFor="comprobante"
+                      className="mt-4 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-[#0088cc]/50 bg-white/70 p-4 transition-colors hover:bg-white focus-within:ring-2 focus-within:ring-[#0088cc]"
+                    >
+                      {preview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={preview} alt="Vista previa del comprobante" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                      ) : (
+                        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-[#f0f4f8] text-[#0088cc]">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" />
+                          </svg>
+                        </span>
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-[#2c4255]">
+                          {file ? file.name : "Subir comprobante de pago"}
+                        </span>
+                        <span className="block text-xs text-[#5b6e80]">
+                          {file ? "Toca para cambiar la imagen" : "Foto o captura de pantalla"}
+                        </span>
+                      </span>
+                    </label>
+                    <input
+                      id="comprobante"
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => onPickFile(e.target.files?.[0])}
+                    />
+                    <p className="field-message" role="alert">
+                      {fileError}
+                    </p>
+                  </div>
+                )}
+
                 {formError && (
                   <p className="field-message" role="alert">
                     {formError}
@@ -340,7 +475,7 @@ export default function MultiStepForm() {
               </button>
             )}
             <button type="submit" className={`glass-button flex-1 ${isLast ? "glass-button-brand" : ""}`} disabled={sending}>
-              {sending ? <span className="spinner" /> : isLast ? "Inscribirme" : "Continuar"}
+              {sending ? <span className="spinner" /> : isLast ? "Enviar inscripción" : "Continuar"}
             </button>
           </div>
         </form>
