@@ -1,7 +1,7 @@
 import json
 import os
+import re
 from datetime import datetime
-
 import gspread
 
 HEADERS = [
@@ -20,6 +20,13 @@ class DuplicateAttendee(Exception):
     pass
 
 
+def _clean_cedula(val: str) -> str:
+    """Extrae únicamente los dígitos numéricos de la cédula."""
+    if not val:
+        return ""
+    return re.sub(r"\D", "", str(val))
+
+
 def _client() -> gspread.Client:
     raw = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
     if raw:
@@ -34,34 +41,50 @@ def _worksheet():
 
 
 def _ensure_headers(ws) -> None:
-    if ws.cell(1, 1).value != HEADERS[0]:
-        ws.insert_row(HEADERS, 1)
-    elif ws.cell(1, len(HEADERS)).value != HEADERS[-1]:
-        # Hoja creada antes de agregar la columna del comprobante
-        ws.update_cell(1, len(HEADERS), HEADERS[-1])
+    try:
+        if ws.cell(1, 1).value != HEADERS[0]:
+            ws.insert_row(HEADERS, 1)
+        elif ws.cell(1, len(HEADERS)).value != HEADERS[-1]:
+            ws.update_cell(1, len(HEADERS), HEADERS[-1])
+    except Exception:
+        pass
 
 
 def cedula_exists(cedula: str) -> bool:
-    ws = _worksheet()
-    cedulas = {c.strip() for c in ws.col_values(3)[1:]}
-    return cedula in cedulas
+    target = _clean_cedula(cedula)
+    if not target:
+        return False
+
+    try:
+        ws = _worksheet()
+        col3_values = ws.col_values(3)[1:]  # Salta los encabezados
+        existing_cedulas = {_clean_cedula(c) for c in col3_values if c}
+        return target in existing_cedulas
+    except Exception as e:
+        print(f"Error al verificar cédula en Sheets: {e}")
+        return False
 
 
 def append_attendee(d: dict) -> None:
     ws = _worksheet()
     _ensure_headers(ws)
 
-    cedulas = {c.strip() for c in ws.col_values(3)[1:]}
-    if d["cedula"] in cedulas:
+    target_cedula = _clean_cedula(d.get("cedula", ""))
+
+    # Verificar cédulas existentes comparando únicamente dígitos
+    col3_values = ws.col_values(3)[1:]
+    existing_cedulas = {_clean_cedula(c) for c in col3_values if c}
+
+    if target_cedula and target_cedula in existing_cedulas:
         raise DuplicateAttendee()
 
     row = [
         datetime.now().strftime("%Y-%m-%d %H:%M"),
-        d["nombre"],
-        d["cedula"],
-        d["correo"],
-        d["telefono"],
-        d["institucion"],
+        d.get("nombre", "").strip(),
+        str(d.get("cedula", "")).strip(),
+        d.get("correo", "").strip(),
+        d.get("telefono", "").strip(),
+        d.get("institucion", "").strip(),
         "Por verificar",
         d.get("comprobante_url", ""),
     ]
