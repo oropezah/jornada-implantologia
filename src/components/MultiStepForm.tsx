@@ -137,8 +137,13 @@ async function sendRegistration(body: FormData) {
   if (!res.ok) {
     let msg = "No se pudo completar la inscripción. Intenta de nuevo.";
     try {
-      const j = await res.json();
-      if (typeof j.detail === "string") msg = j.detail;
+      const text = await res.text();
+      try {
+        const j = JSON.parse(text);
+        if (typeof j.detail === "string") msg = j.detail;
+      } catch {
+        if (text) msg = text;
+      }
     } catch {}
     throw new Error(msg);
   }

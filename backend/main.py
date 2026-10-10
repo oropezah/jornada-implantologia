@@ -25,7 +25,7 @@ app = FastAPI(title="Jornada Implantología API")
 # Reemplaza la configuración de CORS existente por esta:
 allowed_origins_env = os.getenv(
     "ALLOWED_ORIGINS", 
-    "http://localhost:3000,https://plantologia.vercel.app"
+    "http://localhost:3000,https://jornada-implantologia.vercel.app/"
 )
 
 origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
