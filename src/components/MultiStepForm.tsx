@@ -369,14 +369,7 @@ export default function MultiStepForm() {
           </motion.div>
         </div>
       ) : (
-        <form
-          className="liquid-glass p-6 sm:p-9"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void next();
-          }}
-          noValidate
-        >
+        <div className="liquid-glass p-6 sm:p-9">
           {PRUEBA && (
             <p className="mb-5 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
                Modo prueba · no se guarda ni se envía nada
@@ -406,6 +399,12 @@ export default function MultiStepForm() {
                       placeholder={f.placeholder}
                       value={values[f.key]}
                       aria-invalid={errors[f.key] ? true : undefined}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void next();
+                        }
+                      }}
                       onChange={(e) => {
                         setValues((v) => ({ ...v, [f.key]: e.target.value }));
                         if (errors[f.key]) setErrors((er) => ({ ...er, [f.key]: undefined }));
@@ -496,11 +495,16 @@ export default function MultiStepForm() {
                 Atrás
               </button>
             )}
-            <button type="submit" className={`glass-button flex-1 ${isLast ? "glass-button-brand" : ""}`} disabled={sending}>
+            <button
+              type="button"
+              onClick={() => void next()}
+              className={`glass-button flex-1 ${isLast ? "glass-button-brand" : ""}`}
+              disabled={sending}
+            >
               {sending ? <span className="spinner" /> : isLast ? "Enviar inscripción" : "Continuar"}
             </button>
           </div>
-        </form>
+        </div>
       )}
     </>
   );
