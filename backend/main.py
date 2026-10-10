@@ -22,16 +22,20 @@ MAX_FILE_BYTES = 8 * 1024 * 1024
 
 app = FastAPI(title="Jornada Implantología API")
 
-origins = [
-    o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
-    if o.strip()
-]
+# Reemplaza la configuración de CORS existente por esta:
+allowed_origins_env = os.getenv(
+    "ALLOWED_ORIGINS", 
+    "http://localhost:3000,https://plantologia.vercel.app"
+)
+
+origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Permite cualquier preview o despliegue en Vercel
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
