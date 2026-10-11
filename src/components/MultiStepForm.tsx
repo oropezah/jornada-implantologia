@@ -12,8 +12,8 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "https://jornada-implantolog
 const EASE: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 const PAGO = [
-  { label: "Cédula", value: "26.581.836", copy: "26581836" },
-  { label: "Teléfono", value: "04144099988", copy: "04144099988" },
+  { label: "Cédula", value: "27.381.498", copy: "27381498" },
+  { label: "Teléfono", value: "04244240537", copy: "04244240537" },
   { label: "Banco", value: "Banco de Venezuela", copy: "Banco de Venezuela" },
 ];
 
@@ -171,7 +171,7 @@ function CopyButton({ text }: { text: string }) {
         setOk(true);
         setTimeout(() => setOk(false), 1500);
       }}
-      className="rounded-full bg-[#f0f4f8] px-3 py-1 text-xs font-semibold text-[#2c4255] transition-transform active:scale-95"
+      className="rounded-full bg-[#f0f4f8] px-2.5 py-0.5 text-xs font-semibold text-[#2c4255] transition-transform active:scale-95"
     >
       {ok ? "¡Copiado!" : "Copiar"}
     </button>
@@ -187,7 +187,7 @@ export default function MultiStepForm() {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [values, setValues] = useState(EMPTY);
-  const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<FieldKey, string>> >({});
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -199,7 +199,6 @@ export default function MultiStepForm() {
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
 
-  // Despierta el servidor (Render gratis se duerme) mientras la persona llena el formulario
   useEffect(() => {
     if (PRUEBA) return;
     fetch(`${API_URL}/health`, { cache: "no-store" }).catch(() => {});
@@ -221,7 +220,6 @@ export default function MultiStepForm() {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  // Al cambiar de paso, deja la tarjeta centrada en pantalla
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
@@ -230,15 +228,14 @@ export default function MultiStepForm() {
     wrapRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
   }, [step, reduce]);
 
-  // Al terminar, lleva la vista al inicio de la confirmación
   useEffect(() => {
     if (done) wrapRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   }, [done, reduce]);
 
   const variants = {
-    initial: (d: number) => ({ opacity: 0, x: reduce ? 0 : d * 24, filter: reduce ? "blur(0px)" : "blur(4px)" }),
-    animate: { opacity: 1, x: 0, filter: "blur(0px)", transition: { duration: 0.34, ease: EASE } },
-    exit: (d: number) => ({ opacity: 0, x: reduce ? 0 : d * -16, filter: reduce ? "blur(0px)" : "blur(4px)", transition: { duration: 0.16, ease: EASE } }),
+    initial: (d: number) => ({ opacity: 0, x: reduce ? 0 : d * 20, filter: reduce ? "blur(0px)" : "blur(3px)" }),
+    animate: { opacity: 1, x: 0, filter: "blur(0px)", transition: { duration: 0.3, ease: EASE } },
+    exit: (d: number) => ({ opacity: 0, x: reduce ? 0 : d * -12, filter: reduce ? "blur(0px)" : "blur(3px)", transition: { duration: 0.15, ease: EASE } }),
   };
 
   function onPickFile(f: File | undefined) {
@@ -320,14 +317,14 @@ export default function MultiStepForm() {
               animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.45, ease: EASE } }}
               exit={{ opacity: 0, y: -16, transition: { duration: 0.2, ease: EASE } }}
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#0088cc] to-[#12b886] text-white">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#0088cc] to-[#12b886] text-white">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <polyline points="5 12.5 10 17.5 19 7.5" />
                 </svg>
               </span>
               <div className="flex-1">
                 <p className="font-bold text-[#2c4255]">¡Inscripción recibida!</p>
-                <p className="mt-0.5 text-sm text-[#5b6e80]">
+                <p className="mt-0.5 text-xs text-[#5b6e80]">
                   Recibimos tu comprobante. Verificaremos tu pago y te confirmaremos tu lugar.
                 </p>
               </div>
@@ -350,20 +347,20 @@ export default function MultiStepForm() {
           prueba={PRUEBA}
         />
       ) : (
-        <div className="liquid-glass p-6 sm:p-9">
+        <div className="liquid-glass p-5 sm:p-7">
           {PRUEBA && (
-            <p className="mb-5 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+            <p className="mb-3 inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
               Modo prueba · no se guarda ni se envía nada
             </p>
           )}
 
           <ProgressBar current={step} total={STEPS.length} />
 
-          <div className="flex min-h-[400px] flex-col justify-center">
+          <div className="flex min-h-[200px] flex-col justify-center py-2">
             <AnimatePresence mode="wait" custom={direction} initial={false}>
               <motion.div key={step} custom={direction} variants={variants} initial="initial" animate="animate" exit="exit">
-                <h3 className="text-[1.4rem] font-bold tracking-tight text-[#2c4255]">{current.title}</h3>
-                <p className="mb-5 mt-1 text-sm text-[#5b6e80]">{current.hint}</p>
+                <h3 className="text-xl font-bold tracking-tight text-[#2c4255] sm:text-[1.35rem]">{current.title}</h3>
+                <p className="mb-4 mt-0.5 text-xs text-[#5b6e80] sm:text-sm">{current.hint}</p>
 
                 {current.fields.map((f) => (
                   <div key={f.key}>
@@ -399,13 +396,13 @@ export default function MultiStepForm() {
 
                 {current.kind === "pago" && (
                   <div>
-                    <div className="rounded-2xl border border-[#b8d1e1]/70 bg-white/80 text-sm">
-                      <p className="eyebrow px-4 pt-3">Pago móvil</p>
+                    <div className="rounded-xl border border-[#b8d1e1]/70 bg-white/80 text-xs sm:text-sm">
+                      <p className="eyebrow px-3.5 pt-2.5 text-[0.7rem]">Pago móvil</p>
                       <div className="divide-y divide-[#b8d1e1]/50">
                         {PAGO.map((p) => (
-                          <div key={p.label} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                          <div key={p.label} className="flex items-center justify-between gap-3 px-3.5 py-2">
                             <div>
-                              <p className="text-xs text-[#5b6e80]">{p.label}</p>
+                              <p className="text-[0.7rem] text-[#5b6e80]">{p.label}</p>
                               <p className="font-semibold tabular-nums text-[#2c4255]">{p.value}</p>
                             </div>
                             <CopyButton text={p.copy} />
@@ -424,23 +421,23 @@ export default function MultiStepForm() {
                           fileInputRef.current?.click();
                         }
                       }}
-                      className="mt-4 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-[#0088cc]/50 bg-white/70 p-4 transition-colors hover:bg-white focus-within:ring-2 focus-within:ring-[#0088cc]"
+                      className="mt-3 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#0088cc]/50 bg-white/70 p-3 transition-colors hover:bg-white focus-within:ring-2 focus-within:ring-[#0088cc]"
                     >
                       {preview ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={preview} alt="Vista previa del comprobante" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                        <img src={preview} alt="Vista previa del comprobante" className="h-11 w-11 shrink-0 rounded-lg object-cover" />
                       ) : (
-                        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-[#f0f4f8] text-[#0088cc]">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-[#f0f4f8] text-[#0088cc]">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                             <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" />
                           </svg>
                         </span>
                       )}
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold text-[#2c4255]">
+                        <span className="block truncate text-xs font-semibold text-[#2c4255] sm:text-sm">
                           {file ? file.name : "Subir comprobante de pago"}
                         </span>
-                        <span className="block text-xs text-[#5b6e80]">
+                        <span className="block text-[0.7rem] text-[#5b6e80]">
                           {file ? "Toca para cambiar la imagen" : "Foto o captura de pantalla"}
                         </span>
                       </span>
@@ -470,7 +467,7 @@ export default function MultiStepForm() {
             </AnimatePresence>
           </div>
 
-          <div className="mt-2 flex gap-3">
+          <div className="mt-3 flex gap-2.5">
             {step > 0 && (
               <button type="button" className="glass-button-ghost" onClick={back} disabled={sending}>
                 Atrás

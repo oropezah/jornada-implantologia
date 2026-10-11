@@ -155,8 +155,8 @@ const compile = (gl: WebGL2RenderingContext, type: number, source: string) => {
 };
 
 const Iridescence = ({
-  color = '#0088cc', // <-- COLOR DEFAULT EN AZUL MARCA
-  speed = 0.8,
+  color = [1, 1, 1],
+  speed = 1,
   amplitude = 0.1,
   mouseReact = true,
   scale = 1,
@@ -164,8 +164,8 @@ const Iridescence = ({
   rotation = 0,
   warp = 1,
   hueShift = 0,
-  saturation = 1.2,
-  brightness = 1.2,
+  saturation = 1,
+  brightness = 1.5,
   contrast = 1,
   stir = 0.5,
   sheen = 0.3,
@@ -497,6 +497,13 @@ const Iridescence = ({
       canvas.width = Math.max(1, Math.round(state.width * dpr));
       canvas.height = Math.max(1, Math.round(state.height * dpr));
       render();
+      wake();
+    };
+
+    wakeRef.current = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2) * settingsRef.current.resolution;
+      if (canvas.width !== Math.max(1, Math.round(state.width * dpr))) resize();
+      else if (!raf) render();
       wake();
     };
 

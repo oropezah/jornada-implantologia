@@ -33,7 +33,7 @@ origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Opciones permisivas para evitar bloqueos por CORS en mobile
+    allow_origins=["*"],  # Configuración permisiva para evitar bloqueos por CORS
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -123,7 +123,7 @@ def register(
     data["telefono_wa"] = normalize_phone(a.telefono)
     cedula_clean = str(data["cedula"]).strip()
 
-    # 1. Duplicado (hoja en caché: rápido)
+    # 1. Verificación de duplicado (Sheets)
     try:
         if cedula_exists(cedula_clean):
             return JSONResponse(status_code=409, content={"detail": "Esta cédula ya está inscrita."})
@@ -131,7 +131,7 @@ def register(
         log.exception(f"Error verificando cédula en Sheets: {e}")
     t1 = time.perf_counter()
 
-    # 2. Comprobante a Drive
+    # 2. Guardar comprobante en Google Drive
     try:
         data["comprobante_url"] = upload_receipt(content, mime, cedula_clean, data["nombre"])
     except Exception as e:
@@ -139,7 +139,7 @@ def register(
         return JSONResponse(status_code=500, content={"detail": "Error al guardar el comprobante en Google Drive."})
     t2 = time.perf_counter()
 
-    # 3. Fila en Sheets (ya verificamos el duplicado arriba)
+    # 3. Registrar fila en Google Sheets
     try:
         append_attendee(data, check_duplicate=False)
     except DuplicateAttendee:
@@ -154,6 +154,7 @@ def register(
         t1 - t0, t2 - t1, t3 - t2, t3 - t0,
     )
 
+    # 4. Programar tareas de segundo plano (Correo y WhatsApp)
     try:
         bg.add_task(send_confirmation_email, data)
         bg.add_task(notify_whatsapp, data)

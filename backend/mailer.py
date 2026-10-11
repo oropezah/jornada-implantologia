@@ -46,7 +46,7 @@ def _html(d: dict) -> str:
       <p style="font-size:18px;font-weight:700;color:#2c4255;margin:0 0 8px">¡Inscripción agendada, {first}!</p>
       <p style="color:#5b6e80;margin:0 0 18px">Tu lugar quedó registrado. 21 de noviembre de 2026 · Instituto Docente de Urología.</p>
       <table style="width:100%;border-collapse:collapse;border-top:1px solid #dbe6ee;border-bottom:1px solid #dbe6ee">{rows}</table>
-      <p style="margin:18px 0 0"><b>Siguiente paso:</b> te escribiremos por WhatsApp al {phone} con los datos para realizar el pago.</p>
+      <p style="margin:18px 0 0"><b>Estado de tu inscripción:</b> Hemos recibido tu comprobante de pago. Verificaremos los datos y te confirmaremos en breve.</p>
       <p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #dbe6ee;font-size:12px;color:#5b6e80;text-align:center">
         Este reporte fue hecho por <a href="{IG_URL}" style="color:#0088cc;font-weight:600;text-decoration:none">Synco</a>
       </p>
@@ -65,8 +65,7 @@ def send_confirmation_email(d: dict) -> None:
         text = (
             "Hola " + first + ", tu inscripción a la " + EVENT
             + " quedó agendada para el 21 de noviembre de 2026.\n"
-            + "Te escribiremos por WhatsApp al " + d["telefono"]
-            + " con los datos para realizar el pago.\n\n"
+            + "Hemos recibido tu comprobante de pago. Verificaremos los datos y te confirmaremos en breve.\n\n"
             + "Este reporte fue hecho por Synco (" + IG_URL + ")"
         )
 
@@ -77,8 +76,15 @@ def send_confirmation_email(d: dict) -> None:
         msg.set_content(text)
         msg.add_alternative(_html(d), subtype="html")
 
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as s:
+        # Conexión por puerto 587 usando STARTTLS
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as s:
+            s.ehlo()
+            s.starttls()
+            s.ehlo()
             s.login(user, password)
             s.send_message(msg)
+
+        log.info("Correo enviado exitosamente a %s", d.get("correo"))
+
     except Exception:
         log.exception("No se pudo enviar el correo a %s", d.get("correo"))
