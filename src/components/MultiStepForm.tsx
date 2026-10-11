@@ -11,10 +11,15 @@ const PRUEBA = false;
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "https://jornada-implantologia.onrender.com").replace(/\/$/, "");
 const EASE: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
-const PAGO = [
+const PAGO_MOBILE = [
   { label: "Cédula", value: "27.381.498", copy: "27381498" },
   { label: "Teléfono", value: "04244240537", copy: "04244240537" },
   { label: "Banco", value: "Banco de Venezuela", copy: "Banco de Venezuela" },
+];
+
+const PAGO_BINANCE = [
+  { label: "Correo / Pay ID", value: "ana.rangel262@gmail.com", copy: "ana.rangel262@gmail.com" },
+  { label: "Moneda", value: "USDT", copy: "USDT" },
 ];
 
 type FieldKey = "nombre" | "cedula" | "correo" | "telefono" | "institucion";
@@ -26,12 +31,12 @@ type FieldDef = {
   type?: string;
   inputMode?: "text" | "numeric" | "tel" | "email";
   autoComplete?: string;
+  kind?: "text" | "select";
+  options?: { label: string; value: string }[];
   validate: (v: string) => string | null;
 };
 
 type Step = { title: string; hint: string; fields: FieldDef[]; kind?: "pago" };
-
-const minLen = (n: number, msg: string) => (v: string) => (v.trim().length < n ? msg : null);
 
 const STEPS: Step[] = [
   {
@@ -92,15 +97,25 @@ const STEPS: Step[] = [
     ],
   },
   {
-    title: "¿De qué institución vienes?",
-    hint: "Universidad, clínica o consultorio.",
+    title: "Selecciona tu condición",
+    hint: "Indica si eres profesional graduado o estudiante residente.",
     fields: [
-      { key: "institucion", label: "Institución", placeholder: "Institución", autoComplete: "organization", validate: minLen(2, "Cuéntanos de dónde vienes.") },
+      {
+        key: "institucion",
+        label: "Condición",
+        placeholder: "Selecciona una opción",
+        kind: "select",
+        options: [
+          { label: "Residente (80€)", value: "Residente" },
+          { label: "Profesional (100€)", value: "Profesional" },
+        ],
+        validate: (v) => (!v.trim() ? "Selecciona tu condición para determinar la tarifa." : null),
+      },
     ],
   },
   {
     title: "Realiza tu pago",
-    hint: "Haz el pago móvil y sube el comprobante para confirmar tu lugar.",
+    hint: "Selecciona el método de tu preferencia y sube el comprobante.",
     fields: [],
     kind: "pago",
   },
@@ -187,7 +202,7 @@ export default function MultiStepForm() {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [values, setValues] = useState(EMPTY);
-  const [errors, setErrors] = useState<Partial<Record<FieldKey, string>> >({});
+  const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -196,8 +211,31 @@ export default function MultiStepForm() {
   const [done, setDone] = useState(false);
   const [toast, setToast] = useState(false);
 
+  // Estado para la Tasa del Euro (BCV)
+  const [eurRate, setEurRate] = useState<number>(980.61);
+  const [method, setMethod] = useState<"pago_movil" | "binance">("pago_movil");
+
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
+
+  // Consulta Tasa Euro BCV
+  useEffect(() => {
+    async function fetchRate() {
+      try {
+        const res = await fetch("https://ve.dolarapi.com/v1/cotizaciones");
+        if (res.ok) {
+          const data = await res.json();
+          const eur = data.find((item: { moneda: string }) => item.moneda === "EUR");
+          if (eur?.promedio) {
+            setEurRate(eur.promedio);
+          }
+        }
+      } catch (e) {
+        console.warn("Error al cargar la tasa del euro:", e);
+      }
+    }
+    fetchRate();
+  }, []);
 
   useEffect(() => {
     if (PRUEBA) return;
@@ -304,6 +342,14 @@ export default function MultiStepForm() {
     setStep((s) => Math.max(0, s - 1));
   }
 
+  // Precios dinámicos
+  const isResidente = values.institucion === "Residente";
+  const eurAmount = isResidente ? 80 : 100;
+  const bsAmount = (eurAmount * eurRate).toLocaleString("es-VE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
   return (
     <div ref={wrapRef} className="scroll-mt-4">
       <AnimatePresence>
@@ -364,30 +410,54 @@ export default function MultiStepForm() {
 
                 {current.fields.map((f) => (
                   <div key={f.key}>
-                    <input
-                      id={f.key}
-                      name={f.key}
-                      aria-label={f.label}
-                      autoFocus={step > 0}
-                      className="liquid-glass-input"
-                      type={f.type ?? "text"}
-                      inputMode={f.inputMode}
-                      autoComplete={f.autoComplete}
-                      autoCapitalize={f.key === "correo" ? "none" : f.key === "nombre" ? "words" : undefined}
-                      placeholder={f.placeholder}
-                      value={values[f.key]}
-                      aria-invalid={errors[f.key] ? true : undefined}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          void next();
-                        }
-                      }}
-                      onChange={(e) => {
-                        setValues((v) => ({ ...v, [f.key]: e.target.value }));
-                        if (errors[f.key]) setErrors((er) => ({ ...er, [f.key]: undefined }));
-                      }}
-                    />
+                    {f.kind === "select" ? (
+                      <select
+                        id={f.key}
+                        name={f.key}
+                        aria-label={f.label}
+                        className="liquid-glass-input cursor-pointer"
+                        value={values[f.key]}
+                        aria-invalid={errors[f.key] ? true : undefined}
+                        onChange={(e) => {
+                          setValues((v) => ({ ...v, [f.key]: e.target.value }));
+                          if (errors[f.key]) setErrors((er) => ({ ...er, [f.key]: undefined }));
+                        }}
+                      >
+                        <option value="" disabled>
+                          {f.placeholder}
+                        </option>
+                        {f.options?.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={f.key}
+                        name={f.key}
+                        aria-label={f.label}
+                        autoFocus={step > 0}
+                        className="liquid-glass-input"
+                        type={f.type ?? "text"}
+                        inputMode={f.inputMode}
+                        autoComplete={f.autoComplete}
+                        autoCapitalize={f.key === "correo" ? "none" : f.key === "nombre" ? "words" : undefined}
+                        placeholder={f.placeholder}
+                        value={values[f.key]}
+                        aria-invalid={errors[f.key] ? true : undefined}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void next();
+                          }
+                        }}
+                        onChange={(e) => {
+                          setValues((v) => ({ ...v, [f.key]: e.target.value }));
+                          if (errors[f.key]) setErrors((er) => ({ ...er, [f.key]: undefined }));
+                        }}
+                      />
+                    )}
                     <p className="field-message" role="alert">
                       {errors[f.key]}
                     </p>
@@ -396,10 +466,51 @@ export default function MultiStepForm() {
 
                 {current.kind === "pago" && (
                   <div>
+                    {/* Selector de Método de Pago */}
+                    <div className="mb-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setMethod("pago_movil")}
+                        className={`flex-1 rounded-xl p-2.5 text-center text-xs font-bold transition-all ${
+                          method === "pago_movil"
+                            ? "bg-[#0088cc] text-white shadow-md"
+                            : "bg-white/70 text-[#2c4255] hover:bg-white"
+                        }`}
+                      >
+                        Pago Móvil (Bs)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMethod("binance")}
+                        className={`flex-1 rounded-xl p-2.5 text-center text-xs font-bold transition-all ${
+                          method === "binance"
+                            ? "bg-[#0088cc] text-white shadow-md"
+                            : "bg-white/70 text-[#2c4255] hover:bg-white"
+                        }`}
+                      >
+                        Binance Pay (USDT)
+                      </button>
+                    </div>
+
+                    {/* Detalle de Pago según método */}
                     <div className="rounded-xl border border-[#b8d1e1]/70 bg-white/80 text-xs sm:text-sm">
-                      <p className="eyebrow px-3.5 pt-2.5 text-[0.7rem]">Pago móvil</p>
+                      <div className="flex items-center justify-between px-3.5 pt-3 pb-2 border-b border-[#b8d1e1]/40">
+                        <span className="eyebrow text-[0.7rem]">
+                          {method === "pago_movil" ? "Pago Móvil / Transferencia" : "Binance Pay"}
+                        </span>
+                        <span className="font-extrabold text-[#0088cc] text-sm sm:text-base">
+                          {method === "pago_movil" ? `Bs. ${bsAmount}` : `${eurAmount} USDT`}
+                        </span>
+                      </div>
+
+                      {method === "pago_movil" && (
+                        <p className="px-3.5 pt-2 text-[0.68rem] text-[#5b6e80]">
+                          Monto en Bs. calculado a Tasa Euro BCV ({eurRate.toFixed(2)} Bs/EUR) para tarifa de <b>{values.institucion}</b> ({eurAmount}€).
+                        </p>
+                      )}
+
                       <div className="divide-y divide-[#b8d1e1]/50">
-                        {PAGO.map((p) => (
+                        {(method === "pago_movil" ? PAGO_MOBILE : PAGO_BINANCE).map((p) => (
                           <div key={p.label} className="flex items-center justify-between gap-3 px-3.5 py-2">
                             <div>
                               <p className="text-[0.7rem] text-[#5b6e80]">{p.label}</p>
@@ -411,6 +522,7 @@ export default function MultiStepForm() {
                       </div>
                     </div>
 
+                    {/* Zona de Subida de Comprobante */}
                     <div
                       role="button"
                       tabIndex={0}
