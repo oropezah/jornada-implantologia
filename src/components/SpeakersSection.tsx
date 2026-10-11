@@ -4,20 +4,28 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SPEAKERS, initials } from "@/lib/speakers";
 
-const EASE = [0.23, 1, 0.32, 1] as const;
+const EASE: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 export default function SpeakersSection() {
   const [open, setOpen] = useState<string | null>(null);
 
   return (
     <>
-      <p className="eyebrow mb-3">Ponentes · toca para ver más</p>
+      <p className="eyebrow mb-3">Toca un ponente para ver más</p>
 
       <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2">
         {SPEAKERS.map((s, i) => {
           const isOpen = open === s.name;
           return (
-            <div key={s.name} className="speaker-item" data-open={isOpen}>
+            <motion.div
+              key={s.name}
+              className="speaker-item"
+              data-open={isOpen}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.5, ease: EASE, delay: (i % 2) * 0.06 }}
+            >
               <button
                 type="button"
                 className="speaker"
@@ -27,7 +35,18 @@ export default function SpeakersSection() {
               >
                 <span className="avatar">{initials(s.name)}</span>
                 {s.name}
-                <svg className="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <svg
+                  className="chev"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
                   <path d="M9 6l6 6-6 6" />
                 </svg>
               </button>
@@ -62,7 +81,7 @@ export default function SpeakersSection() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           );
         })}
       </div>

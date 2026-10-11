@@ -1,7 +1,9 @@
 import json
 import os
 import re
+import threading
 from datetime import datetime
+
 import gspread
 
 HEADERS = [
@@ -20,8 +22,12 @@ class DuplicateAttendee(Exception):
     pass
 
 
-def _clean_cedula(val: str) -> str:
-    """Extrae únicamente los dígitos numéricos de la cédula."""
+_lock = threading.Lock()
+_ws = None
+
+
+def _clean_cedula(val) -> str:
+    """Extrae únicamente los dígitos de la cédula."""
     if not val:
         return ""
     return re.sub(r"\D", "", str(val))
@@ -35,11 +41,6 @@ def _client() -> gspread.Client:
     return gspread.service_account(filename=filename)
 
 
-def _worksheet():
-    sheet = _client().open_by_key(os.environ["GOOGLE_SHEET_ID"])
-    return sheet.sheet1
-
-
 def _ensure_headers(ws) -> None:
     try:
         if ws.cell(1, 1).value != HEADERS[0]:
@@ -50,33 +51,45 @@ def _ensure_headers(ws) -> None:
         pass
 
 
+def _worksheet():
+    """Hoja en caché: se autentica una sola vez, no en cada petición."""
+    global _ws
+    with _lock:
+        if _ws is None:
+            ws = _client().open_by_key(os.environ["GOOGLE_SHEET_ID"]).sheet1
+            _ensure_headers(ws)
+            _ws = ws
+        return _ws
+
+
+def _reset() -> None:
+    global _ws
+    with _lock:
+        _ws = None
+
+
+def _existing(ws) -> set:
+    return {_clean_cedula(c) for c in ws.col_values(3)[1:] if c}
+
+
 def cedula_exists(cedula: str) -> bool:
     target = _clean_cedula(cedula)
     if not target:
         return False
-
     try:
-        ws = _worksheet()
-        col3_values = ws.col_values(3)[1:]  # Salta los encabezados
-        existing_cedulas = {_clean_cedula(c) for c in col3_values if c}
-        return target in existing_cedulas
-    except Exception as e:
-        print(f"Error al verificar cédula en Sheets: {e}")
-        return False
+        return target in _existing(_worksheet())
+    except Exception:
+        _reset()  # reconecta y reintenta una vez
+        return target in _existing(_worksheet())
 
 
-def append_attendee(d: dict) -> None:
+def append_attendee(d: dict, check_duplicate: bool = True) -> None:
     ws = _worksheet()
-    _ensure_headers(ws)
 
-    target_cedula = _clean_cedula(d.get("cedula", ""))
-
-    # Verificar cédulas existentes comparando únicamente dígitos
-    col3_values = ws.col_values(3)[1:]
-    existing_cedulas = {_clean_cedula(c) for c in col3_values if c}
-
-    if target_cedula and target_cedula in existing_cedulas:
-        raise DuplicateAttendee()
+    if check_duplicate:
+        target = _clean_cedula(d.get("cedula", ""))
+        if target and target in _existing(ws):
+            raise DuplicateAttendee()
 
     row = [
         datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -88,4 +101,8 @@ def append_attendee(d: dict) -> None:
         "Por verificar",
         d.get("comprobante_url", ""),
     ]
-    ws.append_row(row, value_input_option="RAW")
+    try:
+        ws.append_row(row, value_input_option="RAW")
+    except Exception:
+        _reset()
+        raise

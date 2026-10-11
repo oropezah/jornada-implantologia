@@ -1,5 +1,9 @@
+import BackgroundFX from "@/components/BackgroundFX";
+import EventCard from "@/components/EventCard";
 import MultiStepForm from "@/components/MultiStepForm";
+import Reveal from "@/components/Reveal";
 import SpeakersSection from "@/components/SpeakersSection";
+import TiltCard from "@/components/TiltCard";
 import WelcomeSplash from "@/components/WelcomeSplash";
 
 const d = (i: number) => ({ ["--i" as string]: i }) as React.CSSProperties;
@@ -8,43 +12,54 @@ export default function Home() {
   return (
     <div className="flex min-h-dvh flex-col">
       <WelcomeSplash />
+      <BackgroundFX />
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 items-start gap-10 px-5 py-8 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-x-16 lg:gap-y-10 lg:py-16">
-        {/* 1. Intro */}
-        <section className="lg:col-start-1 lg:row-start-1">
-          <p className="eyebrow reveal" style={d(0)}>
-            Universidad de Carabobo · Facultad de Odontología
-          </p>
-          <h1 className="display reveal mt-4" style={d(1)}>
-            III Jornada de Actualización en Implantología Bucal
-          </h1>
-          <p className="lead reveal mt-4 max-w-xl" style={d(2)}>
-            Asegura tu lugar en menos de un minuto.
-          </p>
-          <div className="reveal mt-6 flex flex-wrap gap-2.5" style={d(3)}>
-            <span className="chip">📅 21 de noviembre, 2026</span>
-            <span className="chip">📍 Instituto Docente de Urología</span>
+      <main className="flex-1">
+        {/* Primera pantalla: título + formulario + evento, centrados */}
+        <section className="mx-auto grid min-h-dvh w-full max-w-6xl content-center items-start gap-6 px-5 py-8 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-x-16 lg:gap-y-6">
+          <div className="lg:col-start-1 lg:row-start-1 lg:self-end">
+            <p className="eyebrow reveal" style={d(0)}>
+              Universidad de Carabobo · Facultad de Odontología
+            </p>
+            <h1 className="display reveal mt-4" style={d(1)}>
+              III Jornada de Actualización en Implantología Bucal
+            </h1>
+            <p className="lead reveal mt-4 max-w-xl" style={d(2)}>
+              Asegura tu lugar en menos de un minuto.
+            </p>
+          </div>
+
+          <div id="inscripcion" className="reveal lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center" style={d(3)}>
+            <TiltCard>
+              <MultiStepForm />
+            </TiltCard>
+          </div>
+
+          <div className="reveal lg:col-start-1 lg:row-start-2 lg:self-start" style={d(4)}>
+            <EventCard />
           </div>
         </section>
 
-        {/* 2. Formulario (en móvil queda justo después del título) */}
-        <section
-          className="reveal lg:sticky lg:top-10 lg:col-start-2 lg:row-span-2 lg:row-start-1"
-          style={d(4)}
-          aria-label="Formulario de inscripción"
-        >
-          <MultiStepForm />
-        </section>
+        {/* Ponentes */}
+        <section className="mx-auto w-full max-w-6xl px-5 pb-20 pt-4 sm:px-8">
+          <Reveal>
+            <p className="eyebrow">Programa académico</p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#2c4255] sm:text-3xl">Conoce a los ponentes</h2>
+            <p className="lead mt-2 max-w-xl">Especialistas que compartirán lo último en implantología bucal.</p>
+          </Reveal>
 
-        {/* 3. Ponentes */}
-        <section className="reveal lg:col-start-1 lg:row-start-2" style={d(5)}>
-          <SpeakersSection />
-          <p className="mt-6 text-sm text-[#5b6e80]">
-            Más información: 0424-4000350 ·{" "}
-            <a href="https://instagram.com/implantologiafouc" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0088cc] underline-offset-4 hover:underline">
-              @implantologiafouc
-            </a>
-          </p>
+          <div className="mt-6">
+            <SpeakersSection />
+          </div>
+
+          <Reveal>
+            <p className="mt-8 text-sm text-[#5b6e80]">
+              Más información: 0424-4000350 ·{" "}
+              <a href="https://instagram.com/implantologiafouc" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0088cc] underline-offset-4 hover:underline">
+                @implantologiafouc
+              </a>
+            </p>
+          </Reveal>
         </section>
       </main>
 

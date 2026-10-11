@@ -22,7 +22,7 @@ html { scroll-behavior: smooth; }
 body {
   min-height: 100dvh;
   color: var(--ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-montserrat), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
@@ -214,4 +214,66 @@ html[data-welcome="pending"] .reveal { animation: none; opacity: 0; }
 
 @media (prefers-reduced-transparency: reduce) {
   .liquid-glass, .toast { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}/* ───── Borde de luz animado + brillo de botón ───── */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.glow-border {
+  position: relative;
+  border-radius: 28px;
+}
+
+.glow-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1.5px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--angle),
+    rgba(0, 136, 204, 0) 0deg,
+    rgba(0, 136, 204, 0.95) 70deg,
+    rgba(76, 195, 255, 0.95) 130deg,
+    rgba(0, 136, 204, 0) 210deg,
+    rgba(0, 136, 204, 0) 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin-angle 7s linear infinite;
+}
+
+@keyframes spin-angle {
+  to { --angle: 360deg; }
+}
+
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  transform: translateX(-120%);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .shine:hover::after {
+    transform: translateX(120%);
+    transition: transform 800ms var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-border::before { animation: none; }
+  .shine::after { display: none; }
 }

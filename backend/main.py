@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import time
 
 from dotenv import load_dotenv
 
@@ -96,6 +97,8 @@ def register(
     institucion: str = Form(...),
     comprobante: UploadFile = File(...),
 ):
+    t0 = time.perf_counter()
+
     try:
         a = Attendee(
             nombre=nombre,
@@ -118,31 +121,39 @@ def register(
     data = a.model_dump()
     data["correo"] = str(a.correo)
     data["telefono_wa"] = normalize_phone(a.telefono)
+    cedula_clean = str(data["cedula"]).strip()
 
-    # 1. Verificar duplicado en Sheets
+    # 1. Duplicado (hoja en caché: rápido)
     try:
-        if cedula_exists(str(data["cedula"]).strip()):
+        if cedula_exists(cedula_clean):
             return JSONResponse(status_code=409, content={"detail": "Esta cédula ya está inscrita."})
     except Exception as e:
-        log.exception(f"Error verificando cedula en Sheets: {e}")
+        log.exception(f"Error verificando cédula en Sheets: {e}")
+    t1 = time.perf_counter()
 
-    # 2. Subir a Google Drive
+    # 2. Comprobante a Drive
     try:
-        data["comprobante_url"] = upload_receipt(content, mime, str(data["cedula"]), data["nombre"])
+        data["comprobante_url"] = upload_receipt(content, mime, cedula_clean, data["nombre"])
     except Exception as e:
         log.exception(f"Error subiendo comprobante a Google Drive: {e}")
         return JSONResponse(status_code=500, content={"detail": "Error al guardar el comprobante en Google Drive."})
+    t2 = time.perf_counter()
 
-    # 3. Guardar en Google Sheets
+    # 3. Fila en Sheets (ya verificamos el duplicado arriba)
     try:
-        append_attendee(data)
+        append_attendee(data, check_duplicate=False)
     except DuplicateAttendee:
         return JSONResponse(status_code=409, content={"detail": "Esta cédula ya está inscrita."})
     except Exception as e:
         log.exception(f"Error guardando en Google Sheets: {e}")
         return JSONResponse(status_code=500, content={"detail": "No pudimos registrar los datos en Google Sheets."})
+    t3 = time.perf_counter()
 
-    # Tareas en segundo plano (Envío de correo y WhatsApp)
+    log.info(
+        "register OK · duplicado %.1fs · drive %.1fs · sheets %.1fs · total %.1fs",
+        t1 - t0, t2 - t1, t3 - t2, t3 - t0,
+    )
+
     try:
         bg.add_task(send_confirmation_email, data)
         bg.add_task(notify_whatsapp, data)

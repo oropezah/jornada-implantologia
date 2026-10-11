@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import ProgressBar from "./ProgressBar";
+import RegistrationSuccess from "./RegistrationSuccess";
 import { playSuccessChime, unlockAudio } from "@/lib/sound";
 
 const PRUEBA = false;
@@ -109,7 +110,7 @@ const EMPTY: Record<FieldKey, string> = { nombre: "", cedula: "", correo: "", te
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function compressImage(file: File, maxSide = 1600, quality = 0.85): Promise<File> {
+async function compressImage(file: File, maxSide = 1280, quality = 0.8): Promise<File> {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -180,6 +181,8 @@ function CopyButton({ text }: { text: string }) {
 export default function MultiStepForm() {
   const reduce = useReducedMotion();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const firstRender = useRef(true);
 
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -195,7 +198,12 @@ export default function MultiStepForm() {
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
-  const firstName = values.nombre.trim().split(/\s+/)[0] ?? "";
+
+  // Despierta el servidor (Render gratis se duerme) mientras la persona llena el formulario
+  useEffect(() => {
+    if (PRUEBA) return;
+    fetch(`${API_URL}/health`, { cache: "no-store" }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -212,6 +220,20 @@ export default function MultiStepForm() {
     setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  // Al cambiar de paso, deja la tarjeta centrada en pantalla
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    wrapRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+  }, [step, reduce]);
+
+  // Al terminar, lleva la vista al inicio de la confirmación
+  useEffect(() => {
+    if (done) wrapRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, [done, reduce]);
 
   const variants = {
     initial: (d: number) => ({ opacity: 0, x: reduce ? 0 : d * 24, filter: reduce ? "blur(0px)" : "blur(4px)" }),
@@ -266,8 +288,12 @@ export default function MultiStepForm() {
       playSuccessChime();
       setDone(true);
       setToast(true);
-    } catch (e: any) {
-      setFormError(e?.message || "Ocurrió un error. Intenta de nuevo.");
+    } catch (e: unknown) {
+      if (e instanceof TypeError) {
+        setFormError("No pudimos conectar con el servidor. Revisa tu conexión e intenta de nuevo.");
+      } else {
+        setFormError(e instanceof Error ? e.message : "Ocurrió un error. Intenta de nuevo.");
+      }
     } finally {
       setSending(false);
     }
@@ -282,7 +308,7 @@ export default function MultiStepForm() {
   }
 
   return (
-    <>
+    <div ref={wrapRef} className="scroll-mt-4">
       <AnimatePresence>
         {toast && (
           <div className="pointer-events-none fixed inset-x-0 top-4 z-[90] flex justify-center">
@@ -316,69 +342,24 @@ export default function MultiStepForm() {
       </AnimatePresence>
 
       {done ? (
-        <div className="liquid-glass p-7 sm:p-9">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: EASE }}
-            className="mx-auto mb-5 grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-[#0088cc] to-[#12b886] text-white shadow-[0_16px_36px_-10px_rgba(0,136,204,0.55)]"
-          >
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <polyline className="check-draw" points="5 12.5 10 17.5 19 7.5" />
-            </svg>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE, delay: 0.2 }}>
-            <h3 className="text-center text-2xl font-bold tracking-tight text-[#2c4255]">¡Listo, {firstName}!</h3>
-            <p className="mt-1.5 text-center text-[#5b6e80]">Recibimos tu inscripción y tu comprobante de pago.</p>
-
-            <dl className="mt-6 divide-y divide-[#b8d1e1]/60 rounded-2xl border border-[#b8d1e1]/70 bg-white/70 text-sm">
-              {[
-                ["Nombre", values.nombre.trim()],
-                ["Cédula", values.cedula.trim()],
-                ["Correo", values.correo.trim()],
-                ["Teléfono", values.telefono.trim()],
-                ["Institución", values.institucion.trim()],
-                ["Comprobante", file?.name ?? "—"],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-4 px-4 py-2.5">
-                  <dt className="text-[#5b6e80]">{k}</dt>
-                  <dd className="break-all text-right font-semibold text-[#2c4255]">{v}</dd>
-                </div>
-              ))}
-            </dl>
-
-            <ol className="mt-5 space-y-2 text-sm text-[#2c4255]">
-              <li>1. Verificaremos tu pago.</li>
-              <li>2. Te enviaremos la confirmación a {values.correo.trim()}.</li>
-              <li>3. Instituto Docente de Urología · 21 de noviembre, 2026.</li>
-            </ol>
-
-            {PRUEBA && (
-              <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-800">
-                Modo prueba: no se guardó nada.
-              </p>
-            )}
-
-            <p className="mt-6 border-t border-[#b8d1e1]/60 pt-4 text-center text-xs text-[#5b6e80]">
-              Este reporte fue hecho por{" "}
-              <a href="https://instagram.com/synco.ia" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0088cc] underline-offset-4 hover:underline">
-                Synco
-              </a>
-            </p>
-          </motion.div>
-        </div>
+        <RegistrationSuccess
+          nombre={values.nombre}
+          cedula={values.cedula}
+          correo={values.correo}
+          institucion={values.institucion}
+          prueba={PRUEBA}
+        />
       ) : (
         <div className="liquid-glass p-6 sm:p-9">
           {PRUEBA && (
             <p className="mb-5 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-               Modo prueba · no se guarda ni se envía nada
+              Modo prueba · no se guarda ni se envía nada
             </p>
           )}
 
           <ProgressBar current={step} total={STEPS.length} />
 
-          <div className="min-h-[220px]">
+          <div className="flex min-h-[400px] flex-col justify-center">
             <AnimatePresence mode="wait" custom={direction} initial={false}>
               <motion.div key={step} custom={direction} variants={variants} initial="initial" animate="animate" exit="exit">
                 <h3 className="text-[1.4rem] font-bold tracking-tight text-[#2c4255]">{current.title}</h3>
@@ -390,7 +371,7 @@ export default function MultiStepForm() {
                       id={f.key}
                       name={f.key}
                       aria-label={f.label}
-                      autoFocus
+                      autoFocus={step > 0}
                       className="liquid-glass-input"
                       type={f.type ?? "text"}
                       inputMode={f.inputMode}
@@ -498,7 +479,7 @@ export default function MultiStepForm() {
             <button
               type="button"
               onClick={() => void next()}
-              className={`glass-button flex-1 ${isLast ? "glass-button-brand" : ""}`}
+              className={`glass-button flex-1 ${isLast ? "glass-button-brand shine" : ""}`}
               disabled={sending}
             >
               {sending ? <span className="spinner" /> : isLast ? "Enviar inscripción" : "Continuar"}
@@ -506,6 +487,6 @@ export default function MultiStepForm() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
