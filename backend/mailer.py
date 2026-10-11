@@ -1,8 +1,7 @@
 import logging
 import os
-import smtplib
-from email.message import EmailMessage
 from html import escape
+import resend
 
 log = logging.getLogger("jornada.mail")
 
@@ -28,7 +27,6 @@ def _row(label: str, value: str) -> str:
 
 def _html(d: dict) -> str:
     first = escape(_first(d["nombre"]))
-    phone = escape(d["telefono"])
     rows = (
         _row("Nombre", d["nombre"])
         + _row("Cédula", d["cedula"])
@@ -57,9 +55,7 @@ def _html(d: dict) -> str:
 
 def send_confirmation_email(d: dict) -> None:
     try:
-        user = os.environ["GMAIL_USER"]
-        password = os.environ["GMAIL_APP_PASSWORD"]
-        sender_name = os.getenv("MAIL_FROM_NAME", EVENT)
+        resend.api_key = os.environ.get("RESEND_API_KEY")
         first = _first(d["nombre"])
 
         text = (
@@ -69,22 +65,16 @@ def send_confirmation_email(d: dict) -> None:
             + "Este reporte fue hecho por Synco (" + IG_URL + ")"
         )
 
-        msg = EmailMessage()
-        msg["Subject"] = "Confirmación de inscripción · " + EVENT
-        msg["From"] = sender_name + " <" + user + ">"
-        msg["To"] = d["correo"]
-        msg.set_content(text)
-        msg.add_alternative(_html(d), subtype="html")
+        params = {
+            "from": f"{EVENT} <onboarding@resend.dev>",
+            "to": [d["correo"]],
+            "subject": f"Confirmación de inscripción · {EVENT}",
+            "text": text,
+            "html": _html(d),
+        }
 
-        # Conexión por puerto 587 usando STARTTLS
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as s:
-            s.ehlo()
-            s.starttls()
-            s.ehlo()
-            s.login(user, password)
-            s.send_message(msg)
-
-        log.info("Correo enviado exitosamente a %s", d.get("correo"))
+        resend.Emails.send(params)
+        log.info("Correo enviado exitosamente vía Resend API a %s", d.get("correo"))
 
     except Exception:
         log.exception("No se pudo enviar el correo a %s", d.get("correo"))
