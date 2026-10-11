@@ -98,7 +98,7 @@ const STEPS: Step[] = [
   },
   {
     title: "Selecciona tu condición",
-    hint: "Indica si eres profesional graduado o estudiante residente.",
+    hint: "Indica si eres estudiante o especialista.",
     fields: [
       {
         key: "institucion",
@@ -106,8 +106,8 @@ const STEPS: Step[] = [
         placeholder: "Selecciona una opción",
         kind: "select",
         options: [
-          { label: "Residente (80€)", value: "Residente" },
-          { label: "Profesional (100€)", value: "Profesional" },
+          { label: "Estudiante (€80)", value: "Estudiante" },
+          { label: "Especialista (€100)", value: "Especialista" },
         ],
         validate: (v) => (!v.trim() ? "Selecciona tu condición para determinar la tarifa." : null),
       },
@@ -343,8 +343,8 @@ export default function MultiStepForm() {
   }
 
   // Precios dinámicos
-  const isResidente = values.institucion === "Residente";
-  const eurAmount = isResidente ? 80 : 100;
+  const isEstudiante = values.institucion === "Estudiante";
+  const eurAmount = isEstudiante ? 80 : 100;
   const bsAmount = (eurAmount * eurRate).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -505,7 +505,7 @@ export default function MultiStepForm() {
 
                       {method === "pago_movil" && (
                         <p className="px-3.5 pt-2 text-[0.68rem] text-[#5b6e80]">
-                          Monto en Bs. calculado a Tasa Euro BCV ({eurRate.toFixed(2)} Bs/EUR) para tarifa de <b>{values.institucion}</b> ({eurAmount}€).
+                          Monto en Bs. calculado a Tasa Euro BCV ({eurRate.toFixed(2)} Bs/EUR) para tarifa de <b>{values.institucion}</b> (€{eurAmount}).
                         </p>
                       )}
 
