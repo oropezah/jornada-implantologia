@@ -6,3 +6,6 @@ python-dotenv
 httpx
 python-multipart
 requests
+google-api-python-client
+google-auth
+resend
