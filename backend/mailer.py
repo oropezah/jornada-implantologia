@@ -13,16 +13,7 @@ parts = name.split()
 return parts[0] if parts else name
 
 def _row(label: str, value: str) -> str:
-return f"""
-
-
-
-{label}
-
-
-{escape(value)}
-
-"""
+return f"""\
 
 def _html(d: dict) -> str:
 first_name = escape(_first(d["nombre"]))
@@ -41,10 +32,9 @@ rows = (
 return f"""\
 
 
-      <!-- Header Banner with Gradient Accent -->
+      <!-- Header Banner -->
       <tr>
         <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 36px 32px 32px; color: #ffffff;">
-          <!-- Pill Badge -->
           <div style="display: inline-block; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 100px; padding: 4px 12px; margin-bottom: 16px;">
             <span style="color: #38bdf8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">
               • Inscripción Registrada
@@ -53,7 +43,7 @@ return f"""\
           <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8; margin-bottom: 6px;">
             Universidad de Carabobo
           </div>
-          <h1 style="margin: 0; font-size: 24px; font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; color: #ffffff;">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; color: #ffffff;">
             {EVENT}
           </h1>
         </td>
@@ -65,7 +55,7 @@ return f"""\
           <p style="margin: 0 0 12px; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #0f172a;">
             ¡Hola, {first_name}! 👋
           </p>
-          <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #475569;">
+          <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #475569;">
             Hemos recibido tu solicitud de inscripción y el comprobante adjunto. A continuación encontrarás el resumen de tu registro:
           </p>
 
