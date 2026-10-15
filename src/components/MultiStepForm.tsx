@@ -350,7 +350,7 @@ export default function MultiStepForm() {
 
   // Precios dinámicos
   const isEstudiante = values.institucion.toLowerCase().includes("estudiante");
-  const eurAmount = isEstudiante ? 80 : 100;
+  const eurAmount = isEstudiante ? 100 : 120;
   const bsAmount = (eurAmount * eurRate).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
