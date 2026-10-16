@@ -98,7 +98,7 @@ const STEPS: Step[] = [
   },
   {
     title: "Selecciona tu condición",
-    hint: "Indica si eres estudiante o especialista.",
+    hint: "Indica si eres estudiante, odontólogo general o especialista.",
     fields: [
       {
         key: "institucion",
@@ -107,7 +107,8 @@ const STEPS: Step[] = [
         kind: "select",
         options: [
           { label: "Estudiante (€80)", value: "Estudiante" },
-          { label: "Especialista (€100)", value: "Especialista" },
+          { label: "Odontólogo General (€100)", value: "Odontólogo General" },
+          { label: "Especialista (€120)", value: "Especialista" },
         ],
         validate: (v) => (!v.trim() ? "Selecciona tu condición para determinar la tarifa." : null),
       },
@@ -115,7 +116,7 @@ const STEPS: Step[] = [
   },
   {
     title: "Realiza tu pago",
-    hint: "Selecciona el método de tu preferencia y sube el comprobante.",
+    hint: "Selecciona el método de tu preferencia.",
     fields: [],
     kind: "pago",
   },
@@ -213,7 +214,7 @@ export default function MultiStepForm() {
 
   // Estado para la Tasa del Euro (BCV)
   const [eurRate, setEurRate] = useState<number>(980.61);
-  const [method, setMethod] = useState<"pago_movil" | "binance">("pago_movil");
+  const [method, setMethod] = useState<"pago_movil" | "binance" | "efectivo">("pago_movil");
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -297,7 +298,7 @@ export default function MultiStepForm() {
     setFormError(null);
     if (Object.keys(found).length) return;
 
-    if (current.kind === "pago" && !file) {
+    if (current.kind === "pago" && !file && method !== "efectivo") {
       setFileError("Sube el comprobante de pago para continuar.");
       return;
     }
@@ -316,8 +317,11 @@ export default function MultiStepForm() {
       } else {
         const body = new FormData();
         Object.entries(values).forEach(([k, v]) => body.append(k, v.trim()));
-        const img = await compressImage(file as File);
-        body.append("comprobante", img, img.name);
+        body.append("metodo_pago", method);
+        if (file) {
+          const img = await compressImage(file as File);
+          body.append("comprobante", img, img.name);
+        }
         await sendRegistration(body);
       }
       playSuccessChime();
@@ -343,12 +347,27 @@ export default function MultiStepForm() {
   }
 
   // Precios dinámicos
-  const isEstudiante = values.institucion === "Estudiante";
-  const eurAmount = isEstudiante ? 80 : 100;
+  let eurAmount = 120; // Tarifa por defecto
+  if (values.institucion === "Estudiante") {
+    eurAmount = 80;
+  } else if (values.institucion === "Odontólogo General") {
+    eurAmount = 100;
+  } else if (values.institucion === "Especialista") {
+    eurAmount = 120;
+  }
+
   const bsAmount = (eurAmount * eurRate).toLocaleString("es-VE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+
+  const whatsappMessage = encodeURIComponent(
+    `¡Hola! Quisiera registrarme y coordinar mi pago en efectivo para la jornada.\n\n` +
+      `*Nombre:* ${values.nombre || "No especificado"}\n` +
+      `*Cédula:* ${values.cedula || "No especificada"}\n` +
+      `*Condición:* ${values.institucion || "No especificada"} (€${eurAmount})\n` +
+      `*Teléfono:* ${values.telefono || "No especificado"}`
+  );
 
   return (
     <div ref={wrapRef} className="scroll-mt-4">
@@ -371,7 +390,7 @@ export default function MultiStepForm() {
               <div className="flex-1">
                 <p className="font-bold text-[#2c4255]">¡Inscripción recibida!</p>
                 <p className="mt-0.5 text-xs text-[#5b6e80]">
-                  Recibimos tu comprobante. Verificaremos tu pago y te confirmaremos tu lugar.
+                  Recibimos tus datos. Nos pondremos en contacto contigo para confirmar tu lugar.
                 </p>
               </div>
               <button type="button" aria-label="Cerrar notificación" onClick={() => setToast(false)} className="text-[#5b6e80] transition-transform active:scale-90">
@@ -467,62 +486,98 @@ export default function MultiStepForm() {
                 {current.kind === "pago" && (
                   <div>
                     {/* Selector de Método de Pago */}
-                    <div className="mb-3 flex gap-2">
+                    <div className="mb-3 grid grid-cols-3 gap-1.5 sm:gap-2">
                       <button
                         type="button"
                         onClick={() => setMethod("pago_movil")}
-                        className={`flex-1 rounded-xl p-2.5 text-center text-xs font-bold transition-all ${
+                        className={`rounded-xl p-2 sm:p-2.5 text-center text-[0.72rem] sm:text-xs font-bold transition-all ${
                           method === "pago_movil"
                             ? "bg-[#0088cc] text-white shadow-md"
                             : "bg-white/70 text-[#2c4255] hover:bg-white"
                         }`}
                       >
-                        Pago Móvil (Bs)
+                        Pago Móvil
                       </button>
                       <button
                         type="button"
                         onClick={() => setMethod("binance")}
-                        className={`flex-1 rounded-xl p-2.5 text-center text-xs font-bold transition-all ${
+                        className={`rounded-xl p-2 sm:p-2.5 text-center text-[0.72rem] sm:text-xs font-bold transition-all ${
                           method === "binance"
                             ? "bg-[#0088cc] text-white shadow-md"
                             : "bg-white/70 text-[#2c4255] hover:bg-white"
                         }`}
                       >
-                        Binance Pay (USDT)
+                        Binance Pay
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMethod("efectivo")}
+                        className={`rounded-xl p-2 sm:p-2.5 text-center text-[0.72rem] sm:text-xs font-bold transition-all ${
+                          method === "efectivo"
+                            ? "bg-[#0088cc] text-white shadow-md"
+                            : "bg-white/70 text-[#2c4255] hover:bg-white"
+                        }`}
+                      >
+                        Efectivo
                       </button>
                     </div>
 
                     {/* Detalle de Pago según método */}
-                    <div className="rounded-xl border border-[#b8d1e1]/70 bg-white/80 text-xs sm:text-sm">
-                      <div className="flex items-center justify-between px-3.5 pt-3 pb-2 border-b border-[#b8d1e1]/40">
-                        <span className="eyebrow text-[0.7rem]">
-                          {method === "pago_movil" ? "Pago Móvil / Transferencia" : "Binance Pay"}
-                        </span>
-                        <span className="font-extrabold text-[#0088cc] text-sm sm:text-base">
-                          {method === "pago_movil" ? `Bs. ${bsAmount}` : `${eurAmount} USDT`}
-                        </span>
-                      </div>
-
-                      {method === "pago_movil" && (
-                        <p className="px-3.5 pt-2 text-[0.68rem] text-[#5b6e80]">
-                          Monto en Bs. calculado a Tasa Euro BCV ({eurRate.toFixed(2)} Bs/EUR) para tarifa de <b>{values.institucion}</b> (€{eurAmount}).
+                    {method === "efectivo" ? (
+                      <div className="rounded-xl border border-[#b8d1e1]/70 bg-white/80 p-3.5 text-xs sm:text-sm space-y-3">
+                        <div className="flex items-center justify-between border-b border-[#b8d1e1]/40 pb-2">
+                          <span className="eyebrow text-[0.7rem]">Pago en Efectivo</span>
+                          <span className="font-extrabold text-[#0088cc] text-sm sm:text-base">
+                            €{eurAmount} / ${eurAmount}
+                          </span>
+                        </div>
+                        <p className="text-[#5b6e80] text-xs leading-relaxed">
+                          Puedes realizar tu pago directamente en efectivo. Haz clic abajo para coordinar la entrega con nosotros por WhatsApp.
                         </p>
-                      )}
-
-                      <div className="divide-y divide-[#b8d1e1]/50">
-                        {(method === "pago_movil" ? PAGO_MOBILE : PAGO_BINANCE).map((p) => (
-                          <div key={p.label} className="flex items-center justify-between gap-3 px-3.5 py-2">
-                            <div>
-                              <p className="text-[0.7rem] text-[#5b6e80]">{p.label}</p>
-                              <p className="font-semibold tabular-nums text-[#2c4255]">{p.value}</p>
-                            </div>
-                            <CopyButton text={p.copy} />
-                          </div>
-                        ))}
+                        <a
+                          href={`https://wa.me/584244000350?text=${whatsappMessage}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-xs font-bold text-white shadow-md transition-transform active:scale-95 hover:bg-[#20bd5a]"
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.156 4.22 4.22-1.107z" />
+                          </svg>
+                          Coordinar pago por WhatsApp (0424-4000350)
+                        </a>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="rounded-xl border border-[#b8d1e1]/70 bg-white/80 text-xs sm:text-sm">
+                        <div className="flex items-center justify-between px-3.5 pt-3 pb-2 border-b border-[#b8d1e1]/40">
+                          <span className="eyebrow text-[0.7rem]">
+                            {method === "pago_movil" ? "Pago Móvil / Transferencia" : "Binance Pay"}
+                          </span>
+                          <span className="font-extrabold text-[#0088cc] text-sm sm:text-base">
+                            {method === "pago_movil" ? `Bs. ${bsAmount}` : `${eurAmount} USDT`}
+                          </span>
+                        </div>
 
-                    {/* Zona de Subida de Comprobante */}
+                        {method === "pago_movil" && (
+                          <p className="px-3.5 pt-2 text-[0.68rem] text-[#5b6e80]">
+                            Monto en Bs. calculado a Tasa Euro BCV ({eurRate.toFixed(2)} Bs/EUR) para tarifa de <b>{values.institucion}</b> (€{eurAmount}).
+                          </p>
+                        )}
+
+                        <div className="divide-y divide-[#b8d1e1]/50">
+                          {(method === "pago_movil" ? PAGO_MOBILE : PAGO_BINANCE).map((p) => (
+                            <div key={p.label} className="flex items-center justify-between gap-3 px-3.5 py-2">
+                              <div>
+                                <p className="text-[0.7rem] text-[#5b6e80]">{p.label}</p>
+                                <p className="font-semibold tabular-nums text-[#2c4255]">{p.value}</p>
+                              </div>
+                              <CopyButton text={p.copy} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Zona de Subida de Comprobante (opcional si es en efectivo) */}
                     <div
                       role="button"
                       tabIndex={0}
@@ -547,7 +602,11 @@ export default function MultiStepForm() {
                       )}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-xs font-semibold text-[#2c4255] sm:text-sm">
-                          {file ? file.name : "Subir comprobante de pago"}
+                          {file
+                            ? file.name
+                            : method === "efectivo"
+                            ? "Subir comprobante / acuse (opcional)"
+                            : "Subir comprobante de pago"}
                         </span>
                         <span className="block text-[0.7rem] text-[#5b6e80]">
                           {file ? "Toca para cambiar la imagen" : "Foto o captura de pantalla"}
