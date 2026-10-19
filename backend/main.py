@@ -34,7 +34,7 @@ origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configuración permisiva para evitar bloqueos por CORS
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -135,7 +135,7 @@ def register(
         log.exception(f"Error verificando cédula en Sheets: {e}")
     t1 = time.perf_counter()
 
-    # 2. Guardar comprobante en Google Drive (si fue adjuntado)
+    # 2. Guardar comprobante en Google Drive (si existe)
     if comprobante and comprobante.filename:
         mime = comprobante.content_type or ""
         content = comprobante.file.read(MAX_FILE_BYTES + 1)
@@ -165,12 +165,16 @@ def register(
         t1 - t0, t2 - t1, t3 - t2, t3 - t0,
     )
 
-    # 4. Programar tareas de segundo plano (Correo y WhatsApp)
+    # 4. Programar tareas de segundo plano independientes
     try:
         bg.add_task(send_confirmation_email, data)
-        bg.add_task(notify_whatsapp, data)
     except Exception as e:
-        log.error(f"Error programando tareas secundarias: {e}")
+        log.error(f"Error programando correo: {e}")
+
+    try:
+        bg.add_task(send_admin_whatsapp_notification, data)
+    except Exception as e:
+        log.error(f"Error programando WhatsApp: {e}")
 
     return JSONResponse(status_code=200, content={"ok": True})
 
@@ -185,7 +189,6 @@ def payment_verified(payload: PaymentVerifiedPayload, bg: BackgroundTasks):
     data = payload.model_dump()
     data["correo"] = str(payload.correo)
 
-    # Programar envío de correo verificado en segundo plano
     bg.add_task(send_verified_email, data)
 
     return {"ok": True, "message": "Correo de pago verificado programado exitosamente."}
