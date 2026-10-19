@@ -5,8 +5,15 @@ import requests
 log = logging.getLogger("jornada.whatsapp")
 
 YCLOUD_API_KEY = os.environ.get("YCLOUD_API_KEY")
-ADMIN_PHONE = os.environ.get("ADMIN_WHATSAPP_PHONE")  # Ejemplo: "+584144000000"
-YCLOUD_FROM = os.environ.get("YCLOUD_WHATSAPP_NUMBER", "")  # Tu número emisor registrado en YCloud
+
+def _format_phone(phone: str) -> str:
+    phone = phone.strip()
+    if phone and not phone.startswith("+"):
+        return f"+{phone}"
+    return phone
+
+ADMIN_PHONE = _format_phone(os.environ.get("ADMIN_WHATSAPP_PHONE", ""))
+YCLOUD_FROM = _format_phone(os.environ.get("YCLOUD_WHATSAPP_NUMBER", ADMIN_PHONE))
 
 
 def send_admin_whatsapp_notification(data: dict) -> None:
@@ -14,8 +21,8 @@ def send_admin_whatsapp_notification(data: dict) -> None:
     Envía una notificación al administrador vía YCloud (WhatsApp API)
     usando la plantilla aprobada 'registro_implantologia'.
     """
-    if not YCLOUD_API_KEY or not ADMIN_PHONE:
-        log.warning("YCloud API Key o ADMIN_WHATSAPP_PHONE no configurados. Omitiendo WhatsApp.")
+    if not YCLOUD_API_KEY or not ADMIN_PHONE or not YCLOUD_FROM:
+        log.warning("YCloud API Key, ADMIN_WHATSAPP_PHONE o YCLOUD_WHATSAPP_NUMBER no configurados. Omitiendo WhatsApp.")
         return
 
     url = "https://api.ycloud.com/v2/whatsapp/messages"
