@@ -7,6 +7,7 @@ log = logging.getLogger("jornada.mail")
 
 EVENT = "III Jornada de Actualización en Implantología Bucal"
 IG_URL = "https://instagram.com/synco.ia"
+FROM_EMAIL = f"{EVENT} <jornada@synco-agency.com>"
 
 
 def _first(name: str) -> str:
@@ -22,7 +23,10 @@ def _row(label: str, value: str) -> str:
 </tr>"""
 
 
-def _html(d: dict) -> str:
+# ==============================================================================
+# 1. PLANTILLA Y ENVIÓ: SOLICITUD DE REGISTRO RECIBIDA (EN REVISIÓN)
+# ==============================================================================
+def _html_received(d: dict) -> str:
     first = escape(_first(d["nombre"]))
     rows = (
         _row("Nombre completo", d["nombre"])
@@ -46,7 +50,7 @@ def _html(d: dict) -> str:
         
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:580px;background-color:#ffffff;margin:0 auto;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden">
           
-          <!-- Encabezado con imagen oficial del diente -->
+          <!-- Encabezado -->
           <tr>
             <td style="padding:32px 32px 24px;border-bottom:1px solid #f1f5f9">
               <table width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -80,16 +84,16 @@ def _html(d: dict) -> str:
             <td style="padding:28px 32px">
               
               <div style="margin-bottom:20px">
-                <span style="display:inline-block;background-color:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em">
-                  &#10003; PAGO VERIFICADO &bull; INSCRIPCIÓN CONFIRMADA
+                <span style="display:inline-block;background-color:#fffbe0;color:#b45309;border:1px solid #fde68a;font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em">
+                  &#8987; COMPROBANTE EN REVISIÓN &bull; REGISTRO RECIBIDO
                 </span>
               </div>
 
               <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 8px;letter-spacing:-0.02em">
-                &iexcl;Pago Confirmado, {first}!
+                &iexcl;Hola, {first}!
               </h2>
               <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 24px">
-                Hemos validado exitosamente tu pago. Tu cupo para la <strong>III Jornada de Actualización en Implantología Bucal</strong> está oficialmente reservado y verificado.
+                Hemos recibido tu solicitud de inscripción. Nuestro equipo se encuentra verificando el comprobante de pago adjunto. Te notificaremos por este medio tan pronto sea validado.
               </p>
 
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:24px">
@@ -109,20 +113,20 @@ def _html(d: dict) -> str:
               </table>
 
               <div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">
-                DATOS DEL PARTICIPANTE
+                RESUMEN DE TU REGISTRO
               </div>
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;margin-bottom:24px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
                 {rows}
               </table>
 
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;margin-bottom:24px">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#fffbeb;border:1px solid #fef3c7;border-radius:10px;margin-bottom:24px">
                 <tr>
                   <td style="padding:14px 18px">
-                    <div style="font-size:11px;font-weight:800;color:#0082c8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">
-                      REGISTRO &amp; ACCESO OFICIAL CONFIRMADO
+                    <div style="font-size:11px;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">
+                      ESTATUS DE REGISTRO
                     </div>
-                    <p style="margin:0;font-size:13px;color:#1e40af;line-height:1.5">
-                      Guarda este correo electrónico. Te servirá como tu pase digital de acreditación en la entrada del evento.
+                    <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5">
+                      Tu pago está en proceso de verificación. Una vez confirmado recibirás tu correo oficial de acreditación.
                     </p>
                   </td>
                 </tr>
@@ -155,32 +159,35 @@ def _html(d: dict) -> str:
 
 
 def send_confirmation_email(d: dict) -> None:
+    """Correo inicial al registrarse el participante."""
     try:
         resend.api_key = os.environ.get("RESEND_API_KEY")
         first = _first(d["nombre"])
 
         text = (
-            "Hola " + first + ", tu inscripción a la " + EVENT
-            + " quedó agendada para el 21 de noviembre de 2026.\n"
-            + "Hemos recibido tu comprobante de pago. Verificaremos los datos y te confirmaremos en breve.\n\n"
-            + "Este reporte fue hecho por Synco (" + IG_URL + ")"
+            f"Hola {first}, hemos recibido tu registro para la {EVENT}.\n"
+            "Tu comprobante de pago se encuentra en proceso de revisión por nuestro equipo.\n"
+            "Te notificaremos por este medio una vez que sea confirmado."
         )
 
         params = {
-            "from": f"{EVENT} <onboarding@resend.dev>",
+            "from": FROM_EMAIL,
             "to": [d["correo"]],
-            "subject": f"Confirmación de inscripción · {EVENT}",
+            "subject": f"Solicitud de registro recibida · {EVENT}",
             "text": text,
-            "html": _html(d),
+            "html": _html_received(d),
         }
 
         resend.Emails.send(params)
-        log.info("Correo enviado exitosamente vía Resend API a %s", d.get("correo"))
+        log.info("Correo de registro recibido enviado a %s", d.get("correo"))
 
     except Exception:
-        log.exception("No se pudo enviar el correo a %s", d.get("correo"))
+        log.exception("No se pudo enviar el correo de registro recibido a %s", d.get("correo"))
 
 
+# ==============================================================================
+# 2. PLANTILLA Y ENVIÓ: PAGO VERIFICADO (CONFIRMADOTRIGGER DE GOOGLE SHEETS)
+# ==============================================================================
 def _html_verified(d: dict) -> str:
     first = escape(_first(d["nombre"]))
     rows = (
@@ -314,6 +321,7 @@ def _html_verified(d: dict) -> str:
 
 
 def send_verified_email(d: dict) -> None:
+    """Correo que se dispara cuando en Google Sheets se cambia el estado a 'Confirmado'."""
     try:
         resend.api_key = os.environ.get("RESEND_API_KEY")
         first = _first(d["nombre"])
@@ -326,7 +334,7 @@ def send_verified_email(d: dict) -> None:
         )
 
         params = {
-            "from": f"{EVENT} <jornada@synco-agency.com>",
+            "from": FROM_EMAIL,
             "to": [d["correo"]],
             "subject": f"¡Pago Verificado! Tu inscripción está confirmada · {EVENT}",
             "text": text,
