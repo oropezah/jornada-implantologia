@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import time
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -13,7 +14,7 @@ from fastapi.responses import JSONResponse  # noqa: E402
 from pydantic import BaseModel, EmailStr, ValidationError, field_validator  # noqa: E402
 
 from drive import upload_receipt  # noqa: E402
-from mailer import send_confirmation_email  # noqa: E402
+from mailer import send_confirmation_email, send_verified_email  # noqa: E402
 from sheets import DuplicateAttendee, append_attendee, cedula_exists  # noqa: E402
 from whatsapp import notify_whatsapp  # noqa: E402
 
@@ -82,6 +83,15 @@ class Attendee(BaseModel):
         return v.strip()
 
 
+class PaymentVerifiedPayload(BaseModel):
+    nombre: str
+    cedula: str
+    correo: EmailStr
+    telefono: str
+    institucion: str
+    secret: str
+
+
 @app.get("/health")
 def health():
     return {"ok": True}
@@ -95,7 +105,7 @@ def register(
     correo: str = Form(...),
     telefono: str = Form(...),
     institucion: str = Form(...),
-    comprobante: UploadFile = File(...),
+    comprobante: Optional[UploadFile] = File(None),
 ):
     t0 = time.perf_counter()
 
@@ -111,16 +121,10 @@ def register(
         log.warning(f"Validation error: {e}")
         return JSONResponse(status_code=422, content={"detail": "Revisa los datos del formulario."})
 
-    mime = comprobante.content_type or ""
-    content = comprobante.file.read(MAX_FILE_BYTES + 1)
-    if not content:
-        return JSONResponse(status_code=422, content={"detail": "El comprobante está vacío."})
-    if len(content) > MAX_FILE_BYTES:
-        return JSONResponse(status_code=413, content={"detail": "La imagen es muy pesada (máx. 8 MB)."})
-
     data = a.model_dump()
     data["correo"] = str(a.correo)
     data["telefono_wa"] = normalize_phone(a.telefono)
+    data["comprobante_url"] = ""
     cedula_clean = str(data["cedula"]).strip()
 
     # 1. Verificación de duplicado (Sheets)
@@ -131,12 +135,19 @@ def register(
         log.exception(f"Error verificando cédula en Sheets: {e}")
     t1 = time.perf_counter()
 
-    # 2. Guardar comprobante en Google Drive
-    try:
-        data["comprobante_url"] = upload_receipt(content, mime, cedula_clean, data["nombre"])
-    except Exception as e:
-        log.exception(f"Error subiendo comprobante a Google Drive: {e}")
-        return JSONResponse(status_code=500, content={"detail": "Error al guardar el comprobante en Google Drive."})
+    # 2. Guardar comprobante en Google Drive (si fue adjuntado)
+    if comprobante and comprobante.filename:
+        mime = comprobante.content_type or ""
+        content = comprobante.file.read(MAX_FILE_BYTES + 1)
+        if len(content) > MAX_FILE_BYTES:
+            return JSONResponse(status_code=413, content={"detail": "La imagen es muy pesada (máx. 8 MB)."})
+
+        if content:
+            try:
+                data["comprobante_url"] = upload_receipt(content, mime, cedula_clean, data["nombre"])
+            except Exception as e:
+                log.exception(f"Error subiendo comprobante a Google Drive: {e}")
+                return JSONResponse(status_code=500, content={"detail": "Error al guardar el comprobante en Google Drive."})
     t2 = time.perf_counter()
 
     # 3. Registrar fila en Google Sheets
@@ -162,3 +173,19 @@ def register(
         log.error(f"Error programando tareas secundarias: {e}")
 
     return JSONResponse(status_code=200, content={"ok": True})
+
+
+@app.post("/api/v1/payment-verified")
+def payment_verified(payload: PaymentVerifiedPayload, bg: BackgroundTasks):
+    expected_secret = os.getenv("DRIVE_UPLOAD_SECRET", "mi_secret_super_seguro")
+
+    if payload.secret != expected_secret:
+        raise HTTPException(status_code=401, detail="Secreto inválido")
+
+    data = payload.model_dump()
+    data["correo"] = str(payload.correo)
+
+    # Programar envío de correo verificado en segundo plano
+    bg.add_task(send_verified_email, data)
+
+    return {"ok": True, "message": "Correo de pago verificado programado exitosamente."}
