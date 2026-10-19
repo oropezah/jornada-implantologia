@@ -17,18 +17,18 @@ def _first(name: str) -> str:
 def _row(label: str, value: str) -> str:
     return f"""\
 <tr>
-  <td style="padding:12px 16px;color:#5b738a;font-size:13px;border-bottom:1px solid #e2e8f0;font-weight:500">{label}</td>
-  <td style="padding:12px 16px;text-align:right;font-weight:700;color:#1c2a39;font-size:13px;border-bottom:1px solid #e2e8f0">{escape(value)}</td>
+  <td style="padding:12px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;font-weight:500">{label}</td>
+  <td style="padding:12px 16px;text-align:right;font-weight:600;color:#0f172a;font-size:13px;border-bottom:1px solid #e2e8f0">{escape(value)}</td>
 </tr>"""
 
 
 def _html(d: dict) -> str:
     first = escape(_first(d["nombre"]))
     rows = (
-        _row("Nombre", d["nombre"])
-        + _row("Cédula", d["cedula"])
+        _row("Nombre completo", d["nombre"])
+        + _row("Cédula de identidad", d["cedula"])
         + _row("Teléfono", d["telefono"])
-        + _row("Institución", d["institucion"])
+        + _row("Condición", d["institucion"])
     )
     return f"""\
 <!DOCTYPE html>
@@ -41,36 +41,37 @@ def _html(d: dict) -> str:
   <title>{EVENT}</title>
   <style>
     :root {{ color-scheme: light; supported-color-schemes: light; }}
-    body {{ margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #edf2f7 !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }}
+    body {{ margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f8fafc !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }}
     table {{ border-collapse: collapse !important; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
     img {{ border: 0; line-height: 100%; outline: none; text-decoration: none; }}
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:#edf2f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
   
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;background-color:#edf2f7;margin:0;padding:0">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;background-color:#f8fafc;margin:0;padding:24px 0">
     <tr>
       <td align="center" style="padding:0">
         
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:640px;background-color:#ffffff;margin:0 auto">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:560px;background-color:#ffffff;margin:0 auto;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden">
           
-          <!-- Banner Superior / Header -->
           <tr>
-            <td style="background-color:#1c2a39;padding:32px 24px;border-bottom:4px solid #0082c8">
+            <td style="padding:32px 32px 24px;border-bottom:1px solid #f1f5f9">
               <table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td>
-                    <div style="font-size:11px;font-weight:700;color:#68829b;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px">
-                      UNIVERSIDAD DE CARABOBO &bull; FACULTAD DE ODONTOLOGÍA
+                  <td style="vertical-align:top">
+                    <div style="font-size:10px;font-weight:700;color:#0082c8;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px">
+                      UNIVERSIDAD DE CARABOBO
                     </div>
-                    <div style="font-size:12px;font-weight:700;color:#0082c8;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px">
-                      III JORNADA
+                    <div style="font-size:18px;font-weight:800;color:#1c2a39;letter-spacing:-0.02em;line-height:1.2;text-transform:uppercase">
+                      III JORNADA DE IMPLANTOLOGÍA
                     </div>
-                    <h1 style="color:#ffffff !important;font-size:20px;font-weight:800;margin:0 0 8px;line-height:1.25;letter-spacing:-0.01em;text-transform:uppercase">
-                      ACTUALIZACIÓN EN IMPLANTOLOGÍA BUCAL
-                    </h1>
-                    <div style="font-size:12px;color:#c2d1df;line-height:1.4">
-                      Del programa de Especialización en Implantología Bucal
+                  </td>
+                  <td align="right" style="vertical-align:top;width:48px">
+                    <div style="width:44px;height:44px;background-color:#f0f9ff;border-radius:12px;border:1px solid #bae6fd;display:inline-block;text-align:center;line-height:44px">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none;margin-top:10px" style="vertical-align:middle">
+                        <path d="M7 3C5.5 3 4.5 4.5 4.5 6C4.5 8.5 6 10 7.5 11C8.5 11.7 9 12.5 9 13.5V14H15V13.5C15 12.5 15.5 11.7 16.5 11C18 10 19.5 8.5 19.5 6C19.5 4.5 18.5 3 17 3C15 3 14 5 12 5C10 5 9 3 7 3Z" stroke="#0082c8" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M9 14H15M9 16.5H15M10 19H14M11 21.5H13" stroke="#0082c8" stroke-width="1.6" stroke-linecap="round"/>
+                      </svg>
                     </div>
                   </td>
                 </tr>
@@ -78,58 +79,57 @@ def _html(d: dict) -> str:
             </td>
           </tr>
 
-          <!-- Contenido Principal -->
           <tr>
-            <td style="padding:28px 20px;background-color:#ffffff">
+            <td style="padding:28px 32px">
               
-              <h2 style="font-size:19px;font-weight:700;color:#1c2a39;margin:0 0 8px;letter-spacing:-0.01em">
+              <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 8px;letter-spacing:-0.02em">
                 &iexcl;Hola, {first}!
               </h2>
-              <p style="color:#5b738a;font-size:14px;line-height:1.55;margin:0 0 24px">
-                Hemos recibido tu solicitud de registro. Tu comprobante de pago est&aacute; en proceso de verificaci&oacute;n.
+              <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 24px">
+                Hemos recibido tu solicitud de registro. Tu comprobante de pago est&aacute; en proceso de verificaci&oacute;n por nuestro equipo.
               </p>
 
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f4f7fa;border-left:4px solid #0082c8;margin-bottom:24px">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:24px">
                 <tr>
-                  <td style="padding:16px 18px">
-                    <div style="font-size:11px;font-weight:800;color:#0082c8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">
-                      FECHA &amp; LUGAR DEL EVENTO
+                  <td style="padding:16px 20px">
+                    <div style="font-size:10px;font-weight:700;color:#0082c8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">
+                      EVENTO PRESENCIAL
                     </div>
-                    <div style="font-size:15px;font-weight:800;color:#1c2a39;margin-bottom:2px">
-                      21 DE NOVIEMBRE 2026
+                    <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:2px">
+                      21 de Noviembre 2026
                     </div>
-                    <div style="font-size:13px;font-weight:600;color:#5b738a">
-                      INSTITUTO DOCENTE DE UROLOG&Iacute;A
+                    <div style="font-size:13px;color:#64748b">
+                      Instituto Docente de Urolog&iacute;a
                     </div>
                   </td>
                 </tr>
               </table>
 
-              <div style="font-size:12px;font-weight:700;color:#1c2a39;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">
-                Resumen de Inscripci&oacute;n
+              <div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">
+                RESUMEN DE REGISTRO
               </div>
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;margin-bottom:24px;border:1px solid #e2e8f0;background-color:#ffffff">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;margin-bottom:24px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
                 {rows}
               </table>
 
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#edf2f7;border:1px solid #cbd5e1;margin-bottom:24px">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#fffbebf5;border:1px solid #fef3c7;border-radius:10px;margin-bottom:24px">
                 <tr>
-                  <td style="padding:14px 16px">
-                    <p style="margin:0;font-size:13px;color:#23384b;line-height:1.5">
-                      <strong>Estatus actual:</strong> Comprobante recibido. Te confirmaremos tu cupo definitivo por este mismo medio una vez validada la transferencia.
+                  <td style="padding:12px 16px">
+                    <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5">
+                      <strong>Estatus:</strong> Comprobante en revisión. Una vez verificado el pago te enviaremos tu confirmación oficial por este medio.
                     </p>
                   </td>
                 </tr>
               </table>
 
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top:1px solid #e2e8f0;padding-top:20px;margin-top:12px">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top:1px solid #f1f5f9;padding-top:20px">
                 <tr>
                   <td align="center">
-                    <p style="margin:0 0 6px;font-size:12px;color:#68829b">
+                    <p style="margin:0 0 4px;font-size:12px;color:#94a3b8">
                       III Jornada de Actualizaci&oacute;n en Implantolog&iacute;a Bucal &bull; UC
                     </p>
-                    <p style="margin:0;font-size:11px;color:#94a3b8">
-                      Desarrollado por <a href="{IG_URL}" style="color:#0082c8;font-weight:700;text-decoration:none">Synco</a>
+                    <p style="margin:0;font-size:11px;color:#cbd5e1">
+                      Desarrollado por <a href="{IG_URL}" style="color:#0082c8;font-weight:600;text-decoration:none">Synco</a>
                     </p>
                   </td>
                 </tr>
@@ -178,76 +178,125 @@ def send_confirmation_email(d: dict) -> None:
 def _html_verified(d: dict) -> str:
     first = escape(_first(d["nombre"]))
     rows = (
-        _row("Nombre", d["nombre"])
-        + _row("Cédula", d["cedula"])
+        _row("Nombre completo", d["nombre"])
+        + _row("Cédula de identidad", d["cedula"])
         + _row("Teléfono", d["telefono"])
-        + _row("Institución", d["institucion"])
+        + _row("Condición", d["institucion"])
     )
     return f"""\
 <!DOCTYPE html>
-<html lang="es">
-<head><meta charset="utf-8"><title>{EVENT}</title></head>
-<body style="margin:0;padding:0;background-color:#edf2f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#edf2f7;padding:20px">
+<html lang="es" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>{EVENT}</title>
+  <style>
+    :root {{ color-scheme: light; supported-color-schemes: light; }}
+    body {{ margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f8fafc !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }}
+    table {{ border-collapse: collapse !important; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
+    img {{ border: 0; line-height: 100%; outline: none; text-decoration: none; }}
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;background-color:#f8fafc;margin:0;padding:24px 0">
     <tr>
-      <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:640px;background-color:#ffffff;border-radius:8px;overflow:hidden">
+      <td align="center" style="padding:0">
+        
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:560px;background-color:#ffffff;margin:0 auto;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden">
           
-          <!-- Banner Verde / Éxito -->
           <tr>
-            <td style="background-color:#0d9488;padding:32px 24px;color:#ffffff;text-align:center">
-              <div style="font-size:36px;margin-bottom:8px">🎉</div>
-              <h1 style="font-size:22px;font-weight:800;margin:0 0 8px;text-transform:uppercase">
-                ¡PAGO VERIFICADO Y REGISTRO CONFIRMADO!
-              </h1>
-              <p style="margin:0;font-size:14px;opacity:0.9">
-                {EVENT}
-              </p>
+            <td style="padding:32px 32px 24px;border-bottom:1px solid #f1f5f9">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="vertical-align:top">
+                    <div style="font-size:10px;font-weight:700;color:#0082c8;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px">
+                      UNIVERSIDAD DE CARABOBO
+                    </div>
+                    <div style="font-size:18px;font-weight:800;color:#1c2a39;letter-spacing:-0.02em;line-height:1.2;text-transform:uppercase">
+                      III JORNADA DE IMPLANTOLOGÍA
+                    </div>
+                  </td>
+                  <td align="right" style="vertical-align:top;width:48px">
+                    <div style="width:44px;height:44px;background-color:#f0f9ff;border-radius:12px;border:1px solid #bae6fd;display:inline-block;text-align:center;line-height:44px">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none;margin-top:10px" style="vertical-align:middle">
+                        <path d="M7 3C5.5 3 4.5 4.5 4.5 6C4.5 8.5 6 10 7.5 11C8.5 11.7 9 12.5 9 13.5V14H15V13.5C15 12.5 15.5 11.7 16.5 11C18 10 19.5 8.5 19.5 6C19.5 4.5 18.5 3 17 3C15 3 14 5 12 5C10 5 9 3 7 3Z" stroke="#0082c8" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M9 14H15M9 16.5H15M10 19H14M11 21.5H13" stroke="#0082c8" stroke-width="1.6" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
-          <!-- Cuerpo -->
           <tr>
-            <td style="padding:28px 20px">
-              <h2 style="font-size:18px;color:#1c2a39;margin:0 0 12px">
-                ¡Excelente noticia, {first}!
+            <td style="padding:28px 32px">
+              
+              <div style="margin-bottom:20px">
+                <span style="display:inline-block;background-color:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em">
+                  &check; Pago Verificado &bull; Inscripción Confirmada
+                </span>
+              </div>
+
+              <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 8px;letter-spacing:-0.02em">
+                &iexcl;Todo listo, {first}!
               </h2>
-              <p style="color:#5b738a;font-size:14px;line-height:1.55;margin:0 0 20px">
-                Hemos validado satisfactoriamente tu comprobante de pago. Tu cupo para la jornada está <strong>oficialmente reservado y confirmado</strong>.
+              <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 24px">
+                Hemos verificado exitosamente tu pago. Tu cupo para la jornada est&aacute; oficialmente reservado.
               </p>
 
-              <!-- Box Fecha -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f0fdf4;border-left:4px solid #16a34a;margin-bottom:24px">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:24px">
                 <tr>
-                  <td style="padding:16px 18px">
-                    <div style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">
-                      DETALLES DEL EVENTO
+                  <td style="padding:16px 20px">
+                    <div style="font-size:10px;font-weight:700;color:#0082c8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">
+                      EVENTO PRESENCIAL
                     </div>
-                    <div style="font-size:15px;font-weight:800;color:#1c2a39;margin-bottom:2px">
-                      21 DE NOVIEMBRE 2026
+                    <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:2px">
+                      21 de Noviembre 2026
                     </div>
-                    <div style="font-size:13px;font-weight:600;color:#5b738a">
-                      INSTITUTO DOCENTE DE UROLOGÍA
+                    <div style="font-size:13px;color:#64748b">
+                      Instituto Docente de Urolog&iacute;a
                     </div>
                   </td>
                 </tr>
               </table>
 
-              <!-- Resumen -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:24px;border:1px solid #e2e8f0">
+              <div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">
+                DATOS DEL PARTICIPANTE
+              </div>
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;margin-bottom:24px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
                 {rows}
               </table>
 
-              <p style="color:#5b738a;font-size:13px;line-height:1.5;margin:0 0 20px">
-                Te esperamos con los brazos abiertos. Guarda este correo como tu comprobante oficial de asistencia.
+              <p style="color:#64748b;font-size:13px;line-height:1.5;margin:0 0 24px">
+                Guarda este correo electr&oacute;nico como tu comprobante digital para la acreditaci&oacute;n el d&iacute;a del evento.
               </p>
+
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top:1px solid #f1f5f9;padding-top:20px">
+                <tr>
+                  <td align="center">
+                    <p style="margin:0 0 4px;font-size:12px;color:#94a3b8">
+                      III Jornada de Actualizaci&oacute;n en Implantolog&iacute;a Bucal &bull; UC
+                    </p>
+                    <p style="margin:0;font-size:11px;color:#cbd5e1">
+                      Desarrollado por <a href="{IG_URL}" style="color:#0082c8;font-weight:600;text-decoration:none">Synco</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
             </td>
           </tr>
 
         </table>
+
       </td>
     </tr>
   </table>
+
 </body>
 </html>"""
 
