@@ -16,7 +16,7 @@ from pydantic import BaseModel, EmailStr, ValidationError, field_validator  # no
 from drive import upload_receipt  # noqa: E402
 from mailer import send_confirmation_email, send_verified_email  # noqa: E402
 from sheets import DuplicateAttendee, append_attendee, cedula_exists  # noqa: E402
-from whatsapp import notify_whatsapp  # noqa: E402
+from whatsapp import send_admin_whatsapp_notification  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("jornada")
