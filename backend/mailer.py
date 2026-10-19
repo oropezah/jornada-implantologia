@@ -326,7 +326,7 @@ def send_verified_email(d: dict) -> None:
         )
 
         params = {
-            "from": f"{EVENT} <onboarding@resend.dev>",
+            "from": f"{EVENT} <jornada@synco-agency.com>",
             "to": [d["correo"]],
             "subject": f"¡Pago Verificado! Tu inscripción está confirmada · {EVENT}",
             "text": text,
