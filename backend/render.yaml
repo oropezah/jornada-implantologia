@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: mocca-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - {key: PYTHON_VERSION, value: 3.12.7}
+      - {key: TIMEZONE, value: America/Caracas}
+      - {key: DATABASE_URL, sync: false}
+      - {key: ALLOWED_ORIGINS, sync: false}
+      - {key: GOOGLE_SERVICE_ACCOUNT_JSON, sync: false}
+      - {key: CALENDAR_ID_EDU, sync: false}
+      - {key: CALENDAR_ID_ANABEL, sync: false}
+      - {key: SHEET_ID, sync: false}
+      - {key: RESEND_API_KEY, sync: false}
+      - {key: MAIL_FROM, sync: false}
+      - {key: STUDIO_EMAILS, sync: false}
